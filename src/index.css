@@ -1,0 +1,37 @@
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;700;800&family=Manrope:wght@400;600;700&display=swap');
+@import 'leaflet/dist/leaflet.css';
+
+:root {
+  font-family: 'Manrope', sans-serif;
+  line-height: 1.4;
+  font-weight: 400;
+  color: #f5f7f7;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: #f5f7f7;
+  background:
+    radial-gradient(circle at 12% 16%, rgba(4, 96, 120, 0.5), transparent 34%),
+    radial-gradient(circle at 85% 14%, rgba(251, 133, 0, 0.2), transparent 27%),
+    linear-gradient(150deg, #001219 0%, #002733 44%, #00141f 100%);
+}
+
+h1,
+h2,
+h3 {
+  font-family: 'Syne', sans-serif;
+}
+
+#root {
+  min-height: 100vh;
+}
