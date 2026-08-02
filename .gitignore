@@ -11,6 +11,10 @@ node_modules
 dist
 dist-ssr
 *.local
+
+# Test artifacts
+test-output.txt
+vitest-results.json
 .env
 .env.*
 

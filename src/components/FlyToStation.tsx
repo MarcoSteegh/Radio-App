@@ -15,11 +15,11 @@ function FlyToStation({ latitude, longitude, requestKey }: FlyToStationProps) {
       return
     }
 
+    lastHandledRequestKeyRef.current = requestKey
+
     if (latitude === null || latitude === undefined || longitude === null || longitude === undefined) {
       return
     }
-
-    lastHandledRequestKeyRef.current = requestKey
 
     map.flyTo([latitude, longitude], 9, {
       duration: 1.4,
