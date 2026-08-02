@@ -126,6 +126,7 @@ function App() {
 
   const { toast, showToast, dismissToast } = useToast()
   const { stations, mapStations, isLoading, error, listableStations, countryOptions, languageOptions, tagOptions, loadStations } = useStations()
+  const [dataStatus, setDataStatus] = useState<'live' | 'fallback'>('live')
   const { favoritesById, favoriteIdSet, favoriteStations, toggleFavorite, importFavorites, updateFavoritesFromStations } = useFavorites()
   const { userLocation, isLocating, locationError, locateUser } = useGeolocation()
   const { bluetoothDeviceName, bluetoothError, isBluetoothConnecting, connectBluetoothDevice } = useBluetooth()
@@ -231,6 +232,15 @@ function App() {
   useEffect(() => {
     playStationRef.current = playStation
   }, [playStation])
+
+  useEffect(() => {
+    if (stations.length > 0 && stations[0]?.stationuuid?.startsWith('fallback-')) {
+      setDataStatus('fallback')
+      return
+    }
+
+    setDataStatus('live')
+  }, [stations])
 
   const updateFavoritesFromStationsRef = useRef(updateFavoritesFromStations)
   useEffect(() => {
@@ -458,6 +468,9 @@ function App() {
           {activeOfflineCount > 0 ? (
             <p className="helper">{activeOfflineCount} stations tijdelijk verborgen wegens streamfouten.</p>
           ) : null}
+          <p className={`helper ${dataStatus === 'fallback' ? 'error-text' : ''}`}>
+            {dataStatus === 'fallback' ? 'Gebruik lokale fallback-data vanwege API-problemen.' : 'Live data actief.'}
+          </p>
           <div className="filter-grid">
             <label>
               Land

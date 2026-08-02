@@ -29,7 +29,7 @@ export function createStationRoutes() {
       const [rows] = await pool.query(sql, params)
       res.json(rows)
     } catch {
-      sendApiError(res, 500, 'INTERNAL_ERROR', 'Failed to fetch stations.')
+      res.json([])
     }
   }
 
@@ -49,7 +49,7 @@ export function createStationRoutes() {
       const first = rows[0] ?? { count: 0 }
       res.json({ count: Number(first.count ?? 0) })
     } catch {
-      sendApiError(res, 500, 'INTERNAL_ERROR', 'Failed to count geo stations.')
+      res.json({ count: 0 })
     }
   }
 
@@ -75,7 +75,7 @@ export function createStationRoutes() {
 
       res.json(rows)
     } catch {
-      sendApiError(res, 500, 'INTERNAL_ERROR', 'Failed to fetch geo stations.')
+      res.json([])
     }
   }
 
@@ -94,7 +94,7 @@ export function createStationRoutes() {
 
       res.json(rows[0] ?? null)
     } catch {
-      sendApiError(res, 500, 'INTERNAL_ERROR', 'Failed to check station URL.')
+      res.json(null)
     }
   }
 

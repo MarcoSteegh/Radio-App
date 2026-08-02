@@ -390,6 +390,19 @@ async function request<T>(path: string, options: RequestOptions = {}, query?: Re
   throw new ApiError('Request failed after retries', 0, 'API_RETRY_EXHAUSTED')
 }
 
+export async function probeApiHealth(signal?: AbortSignal): Promise<boolean> {
+  try {
+    const response = await fetch(buildUrl('/health'), {
+      method: 'GET',
+      credentials: 'same-origin',
+      signal,
+    })
+    return response.ok
+  } catch {
+    return false
+  }
+}
+
 export async function fetchStations(params: {
   term: string
   offset: number

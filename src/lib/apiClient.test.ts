@@ -6,7 +6,7 @@
  * - request() timeout: ApiError with API_TIMEOUT code after timeout fires
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { ApiError, fetchStations, getApiErrorUserMessage } from './apiClient'
+import { ApiError, fetchStations, getApiErrorUserMessage, probeApiHealth } from './apiClient'
 
 // ---------------------------------------------------------------------------
 // getApiErrorUserMessage
@@ -67,6 +67,27 @@ describe('getApiErrorUserMessage', () => {
   it('returns E-REQ-403 for HTTP 403', () => {
     const err = new ApiError('forbidden', 403)
     expect(getApiErrorUserMessage(err)).toContain('E-REQ-403')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Health probe
+// ---------------------------------------------------------------------------
+describe('probeApiHealth', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('returns false when the health endpoint is unavailable', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
+
+    await expect(probeApiHealth()).resolves.toBe(false)
+  })
+
+  it('returns true when the health endpoint responds successfully', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true }))
+
+    await expect(probeApiHealth()).resolves.toBe(true)
   })
 })
 

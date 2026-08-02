@@ -18,6 +18,7 @@ export function createHealthRoute() {
       res.json({
         ok: true,
         status,
+        db_available: true,
         db_latency_ms: dbLatencyMs,
         uptime_seconds: Math.floor(process.uptime()),
         memory_mb: Math.round(process.memoryUsage().rss / 1024 / 1024),
@@ -27,7 +28,18 @@ export function createHealthRoute() {
         total_requests_tracked: totalRequests,
       })
     } catch {
-      res.status(500).json({ ok: false, status: 'error' })
+      res.json({
+        ok: true,
+        status: 'degraded',
+        db_available: false,
+        db_latency_ms: null,
+        uptime_seconds: Math.floor(process.uptime()),
+        memory_mb: Math.round(process.memoryUsage().rss / 1024 / 1024),
+        sla_target_pct: SLA_TARGET,
+        availability_pct: null,
+        p95_latency_ms: null,
+        total_requests_tracked: 0,
+      })
     }
   }
 

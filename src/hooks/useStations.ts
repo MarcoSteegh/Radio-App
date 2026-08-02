@@ -1,49 +1,12 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import type { LoadOptions, Station } from '../types/station'
-import { ApiError, fetchStations, fetchGeoStations, getApiErrorUserMessage } from '../lib/apiClient'
+import { ApiError, fetchStations, fetchGeoStations, getApiErrorUserMessage, probeApiHealth } from '../lib/apiClient'
 import { fetchStationsDirect, fetchGeoStationsDirect } from '../lib/directRadioBrowser'
 import { trackEvent } from '../lib/observability'
 import { sanitizeStation, dedupeStationsByUuid, formatOptions } from '../utils/stationUtils'
+import { fallbackStations } from '../lib/fallbackStations'
 
 const HEALTH_REFRESH_MS = 3 * 60 * 1000
-const PROBE_TIMEOUT_MS = 2500
-
-let serverAvailable: boolean | null = null
-let probePromise: Promise<boolean> | null = null
-
-function probeServer(): Promise<boolean> {
-  if (serverAvailable !== null) {
-    return Promise.resolve(serverAvailable)
-  }
-
-  if (probePromise) {
-    return probePromise
-  }
-
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string
-  if (!API_BASE_URL) {
-    serverAvailable = false
-    return Promise.resolve(false)
-  }
-
-  probePromise = (async () => {
-    try {
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS)
-      const response = await fetch(`${API_BASE_URL}/health`, {
-        signal: controller.signal,
-        credentials: 'same-origin',
-      })
-      clearTimeout(timeoutId)
-      serverAvailable = response.ok
-    } catch {
-      serverAvailable = false
-    }
-    return serverAvailable
-  })()
-
-  return probePromise
-}
 
 async function tryFetchStations(params: {
   term: string
@@ -51,17 +14,15 @@ async function tryFetchStations(params: {
   limit: number
   signal?: AbortSignal
 }): Promise<Station[]> {
-  const available = await probeServer()
-
-  if (!available) {
-    return fetchStationsDirect(params)
-  }
-
   try {
+    const isHealthy = await probeApiHealth(params.signal)
+    if (!isHealthy) {
+      return fetchStationsDirect(params)
+    }
+
     return await fetchStations(params)
   } catch (err) {
     if (err instanceof ApiError && (err.status === 0 || err.code === 'API_NETWORK_UNAVAILABLE' || err.code === 'API_TIMEOUT')) {
-      serverAvailable = false
       return fetchStationsDirect(params)
     }
     throw err
@@ -73,17 +34,15 @@ async function tryFetchGeoStations(params: {
   limit: number
   signal?: AbortSignal
 }): Promise<Station[]> {
-  const available = await probeServer()
-
-  if (!available) {
-    return fetchGeoStationsDirect(params)
-  }
-
   try {
+    const isHealthy = await probeApiHealth(params.signal)
+    if (!isHealthy) {
+      return fetchGeoStationsDirect(params)
+    }
+
     return await fetchGeoStations(params)
   } catch (err) {
     if (err instanceof ApiError && (err.status === 0 || err.code === 'API_NETWORK_UNAVAILABLE' || err.code === 'API_TIMEOUT')) {
-      serverAvailable = false
       return fetchGeoStationsDirect(params)
     }
     throw err
@@ -151,7 +110,7 @@ export function useStations() {
       const cleaned = allData
         .map((station) => sanitizeStation(station))
         .filter((station): station is Station => Boolean(station))
-      const uniqueCleaned = dedupeStationsByUuid(cleaned)
+      const uniqueCleaned = dedupeStationsByUuid(cleaned.length > 0 ? cleaned : fallbackStations)
 
       if (requestId !== activeRequestIdRef.current) {
         return
@@ -172,7 +131,9 @@ export function useStations() {
 
       if (!silent) {
         setError(getApiErrorUserMessage(err, 'station_search'))
-        setStations([])
+      }
+      if (!silent && stations.length === 0) {
+        setStations(fallbackStations)
       }
 
       if (err instanceof ApiError) {

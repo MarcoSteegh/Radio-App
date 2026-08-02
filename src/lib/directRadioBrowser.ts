@@ -1,14 +1,19 @@
 import type { Station } from '../types/station'
 import { sanitizeStation } from '../utils/stationUtils'
+import { fallbackStations } from './fallbackStations'
 
 const RADIO_BROWSER_BASE = 'https://de1.api.radio-browser.info/json'
 
 async function directFetch<T>(url: string, signal?: AbortSignal): Promise<T> {
-  const response = await fetch(url, { signal })
-  if (!response.ok) {
-    throw new Error(`Radio Browser API error: ${response.status}`)
+  try {
+    const response = await fetch(url, { signal })
+    if (!response.ok) {
+      throw new Error(`Radio Browser API error: ${response.status}`)
+    }
+    return response.json() as Promise<T>
+  } catch {
+    return fallbackStations as T
   }
-  return response.json() as Promise<T>
 }
 
 export async function fetchStationsDirect(params: {

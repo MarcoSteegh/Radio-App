@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test'
-import { allStations, playableStations, type StationFixture } from '../fixtures/stations'
+import { playableStations, type StationFixture } from '../fixtures/stations'
 
 type MockApiOptions = {
   stations?: StationFixture[]

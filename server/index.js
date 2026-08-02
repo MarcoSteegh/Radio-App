@@ -245,12 +245,11 @@ async function initializeObservabilityTables() {
 }
 
 void initializeObservabilityTables()
-  .then(() => {
+  .catch((error) => {
+    console.warn('Observability tables unavailable; continuing without them:', error.message)
+  })
+  .finally(() => {
     app.listen(Number(API_PORT), API_HOST, () => {
       console.log(`API listening on http://${API_HOST}:${API_PORT}`)
     })
-  })
-  .catch((error) => {
-    console.error('Failed to initialize observability tables:', error)
-    process.exit(1)
   })
