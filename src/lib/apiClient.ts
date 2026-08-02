@@ -138,11 +138,7 @@ const DEFAULT_TIMEOUT_MS = 8000
 const GEO_TIMEOUT_MS = 12000
 const MAX_GET_RETRIES = 2
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string
-
-if (!API_BASE_URL) {
-  throw new Error('VITE_API_BASE_URL must be set in .env.local')
-}
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? 'http://localhost:3000/api'
 
 function buildUrl(path: string, query?: Record<string, string | number | undefined>) {
   const url = new URL(`${API_BASE_URL}${path}`)
