@@ -1,0 +1,26 @@
+{
+  "name": "World Radio Explorer",
+  "short_name": "Radio Explorer",
+  "description": "Ontdek en beluister radiostations van over de hele wereld op een interactieve kaart.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#001219",
+  "theme_color": "#ffb703",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["entertainment", "music"],
+  "lang": "nl"
+}

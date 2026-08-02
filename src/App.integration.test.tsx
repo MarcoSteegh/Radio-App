@@ -3,10 +3,39 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ReactNode } from 'react'
 import App from './App'
 
+vi.mock('@tanstack/react-virtual', () => ({
+  useVirtualizer: ({ count }: { count: number }) => ({
+    getTotalSize: () => count * 52,
+    getVirtualItems: () =>
+      Array.from({ length: count }, (_, index) => ({
+        index,
+        start: index * 52,
+      })),
+  }),
+}))
+
+const mockLeafletMap = {
+  addLayer: vi.fn(),
+  removeLayer: vi.fn(),
+  flyTo: vi.fn(),
+}
+
+const mockMapInstance = {
+  getBounds: () => ({
+    getNorth: () => 90,
+    getSouth: () => -90,
+    getEast: () => 180,
+    getWest: () => -180,
+  }),
+  getZoom: () => 2,
+}
+
 vi.mock('react-leaflet', () => ({
   MapContainer: ({ children }: { children: ReactNode }) => (
     <div data-testid="map-container">{children}</div>
   ),
+  useMapEvents: () => mockMapInstance,
+  useMap: () => mockLeafletMap,
   TileLayer: () => null,
   CircleMarker: ({ children }: { children?: ReactNode }) => (
     <div>{children}</div>
@@ -14,9 +43,24 @@ vi.mock('react-leaflet', () => ({
   Popup: ({ children }: { children?: ReactNode }) => <>{children}</>,
 }))
 
-vi.mock('./components/FlyToStation', () => ({
-  default: () => null,
+vi.mock('leaflet', () => ({
+  default: {
+    markerClusterGroup: () => ({
+      addLayer: vi.fn(),
+      on: vi.fn(),
+    }),
+    marker: () => ({
+      on: vi.fn(),
+      bindPopup: vi.fn(),
+      bindTooltip: vi.fn(),
+    }),
+    divIcon: () => ({}),
+    point: (x: number, y: number) => ({ x, y }),
+  },
 }))
+
+vi.mock('leaflet.markercluster', () => ({}))
+vi.mock('leaflet.markercluster/dist/MarkerCluster.css', () => ({}))
 
 vi.mock('./components/OfflineCountdown', () => ({
   default: () => <span>offline</span>,
@@ -53,10 +97,42 @@ const stationFixture = [
     geo_lat: 50.85,
     geo_long: 4.35,
   },
+  {
+    stationuuid: 's3',
+    name: 'Talk US',
+    country: 'United States',
+    state: '',
+    favicon: '',
+    url_resolved: 'https://stream.example/3',
+    language: 'english',
+    tags: 'talk',
+    votes: 3,
+    clickcount: 7,
+    lastcheckok: 1,
+    geo_lat: null,
+    geo_long: null,
+  },
 ]
+
+function getStationButton(name: string): HTMLButtonElement {
+  const stationText = screen
+    .getAllByText(name)
+    .find((node) => node.closest('button')?.className.includes('station'))
+
+  const button = stationText?.closest('button')
+  if (!button) {
+    throw new Error(`${name} station button not found`)
+  }
+
+  return button as HTMLButtonElement
+}
 
 describe('App integration', () => {
   beforeEach(() => {
+    localStorage.clear()
+    mockLeafletMap.addLayer.mockClear()
+    mockLeafletMap.removeLayer.mockClear()
+    mockLeafletMap.flyTo.mockClear()
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue({
@@ -197,10 +273,113 @@ describe('App integration', () => {
 
     expect(screen.getByText('Tijdelijk offline (1)')).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Herstel' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Check offline opnieuw' }))
 
     await waitFor(() => {
       expect(screen.queryByText('Tijdelijk offline (1)')).not.toBeInTheDocument()
     })
+  })
+
+  it('automatically switches to an alternative station on stream error (fallback)', async () => {
+    render(<App />)
+
+    await waitFor(() => {
+      expect(document.querySelector('audio')).not.toBeNull()
+    })
+
+    // Wait for stations to be loaded and first station (Jazz NL / s1) to be selected.
+    await waitFor(() => {
+      const audio = document.querySelector('audio')
+      expect(audio?.getAttribute('aria-label')).toMatch(/Jazz NL|Pop BE/)
+    })
+
+    const audio = document.querySelector('audio')!
+    // Record which station was initially selected; fallback should switch away from it.
+    const initialLabel = audio.getAttribute('aria-label') ?? ''
+
+    fireEvent.error(audio)
+
+    // Fallback toast should appear.
+    await waitFor(() => {
+      expect(screen.getByText(/Schakel over naar alternatief/)).toBeInTheDocument()
+    })
+
+    // After fallback the audio element should reference a DIFFERENT station.
+    await waitFor(() => {
+      const audioAfter = document.querySelector('audio')
+      expect(audioAfter?.getAttribute('aria-label')).not.toBe(initialLabel)
+    })
+  })
+
+  it('shows exhausted fallback message when only one station is available', async () => {
+    // Override fetch to return a single-station list for this test.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => [stationFixture[0]],
+      }),
+    )
+
+    render(<App />)
+
+    await waitFor(() => {
+      expect(document.querySelector('audio')).not.toBeNull()
+    })
+
+    const audio = document.querySelector('audio')!
+    fireEvent.error(audio)
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Geen alternatief station beschikbaar/),
+      ).toBeInTheDocument()
+    })
+  })
+
+  it('recenters the map only when switching to a different station', async () => {
+    render(<App />)
+
+    await waitFor(() => {
+      expect(mockLeafletMap.flyTo).toHaveBeenCalled()
+    })
+
+    const initialFlyToCount = mockLeafletMap.flyTo.mock.calls.length
+    const popStationButton = getStationButton('Pop BE')
+
+    fireEvent.click(popStationButton)
+
+    await waitFor(() => {
+      expect(mockLeafletMap.flyTo).toHaveBeenCalledWith([50.85, 4.35], 9, {
+        duration: 1.4,
+      })
+    })
+
+    expect(mockLeafletMap.flyTo).toHaveBeenCalledTimes(initialFlyToCount + 1)
+
+    fireEvent.click(getStationButton('Pop BE'))
+
+    expect(mockLeafletMap.flyTo).toHaveBeenCalledTimes(initialFlyToCount + 1)
+  })
+
+  it('shows a toast and keeps the map in place when the selected station has no coordinates', async () => {
+    render(<App />)
+
+    await waitFor(() => {
+      expect(mockLeafletMap.flyTo).toHaveBeenCalled()
+    })
+
+    const initialFlyToCount = mockLeafletMap.flyTo.mock.calls.length
+    const talkStationButton = getStationButton('Talk US')
+
+    fireEvent.click(talkStationButton)
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('Kan Talk US niet op de kaart centreren: locatie ontbreekt.'),
+      ).toBeInTheDocument()
+    })
+
+    expect(mockLeafletMap.flyTo).toHaveBeenCalledTimes(initialFlyToCount)
   })
 })

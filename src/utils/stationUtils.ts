@@ -75,6 +75,10 @@ export function sanitizeStation(value: unknown): Station | null {
   }
 }
 
+export function dedupeStationsByUuid(stations: Station[]): Station[] {
+  return Array.from(new Map(stations.map((station) => [station.stationuuid, station])).values())
+}
+
 export function parseStoredFavorites(storageKey: string): Record<string, Station> {
   try {
     const stored = localStorage.getItem(storageKey)

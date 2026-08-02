@@ -1,23 +1,30 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useMap } from 'react-leaflet'
-import type { Station } from '../types/station'
-
 type FlyToStationProps = {
-  station: Station | null
+  latitude: number | null | undefined
+  longitude: number | null | undefined
+  requestKey: number
 }
 
-function FlyToStation({ station }: FlyToStationProps) {
+function FlyToStation({ latitude, longitude, requestKey }: FlyToStationProps) {
   const map = useMap()
+  const lastHandledRequestKeyRef = useRef<number | null>(null)
 
   useEffect(() => {
-    if (!station || station.geo_lat === null || station.geo_long === null) {
+    if (requestKey === 0 || lastHandledRequestKeyRef.current === requestKey) {
       return
     }
 
-    map.flyTo([station.geo_lat, station.geo_long], 6, {
+    if (latitude === null || latitude === undefined || longitude === null || longitude === undefined) {
+      return
+    }
+
+    lastHandledRequestKeyRef.current = requestKey
+
+    map.flyTo([latitude, longitude], 9, {
       duration: 1.4,
     })
-  }, [map, station])
+  }, [latitude, longitude, map, requestKey])
 
   return null
 }
