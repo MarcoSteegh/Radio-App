@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { formatCountdown, getCountdownTone } from '../utils/stationUtils'
 
 type OfflineCountdownProps = {
@@ -10,10 +10,12 @@ function OfflineCountdown({ offlineUntil, onExpire }: OfflineCountdownProps) {
   const [msRemaining, setMsRemaining] = useState(() =>
     Math.max(0, offlineUntil - Date.now()),
   )
+  const onExpireRef = useRef(onExpire)
+  onExpireRef.current = onExpire
 
   useEffect(() => {
     if (offlineUntil <= Date.now()) {
-      onExpire()
+      onExpireRef.current()
       return
     }
 
@@ -23,14 +25,14 @@ function OfflineCountdown({ offlineUntil, onExpire }: OfflineCountdownProps) {
 
       if (next <= 0) {
         window.clearInterval(timerId)
-        onExpire()
+        onExpireRef.current()
       }
     }, 1000)
 
     return () => {
       window.clearInterval(timerId)
     }
-  }, [offlineUntil, onExpire])
+  }, [offlineUntil])
 
   return (
     <span className={`countdown ${getCountdownTone(msRemaining)}`}>

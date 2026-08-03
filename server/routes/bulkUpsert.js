@@ -2,10 +2,17 @@ import { pool } from '../db.js'
 import { sendApiError } from '../middleware/helpers.js'
 
 export function createBulkUpsertRoute() {
+  const MAX_ROWS = 5000
+
   async function bulkUpsert(req, res) {
     const rows = Array.isArray(req.body) ? req.body : []
     if (rows.length === 0) {
       sendApiError(res, 400, 'INVALID_PAYLOAD', 'Expected a non-empty array payload.')
+      return
+    }
+
+    if (rows.length > MAX_ROWS) {
+      sendApiError(res, 400, 'PAYLOAD_TOO_LARGE', `Maximum ${MAX_ROWS} rows per request.`)
       return
     }
 

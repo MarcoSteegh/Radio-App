@@ -22,8 +22,16 @@ export function useGeolocation() {
         })
         setIsLocating(false)
       },
-      () => {
-        setLocationError('Locatie ophalen mislukt. Controleer je browsertoestemming.')
+      (error) => {
+        let message = 'Locatie ophalen mislukt.'
+        if (error.code === GeolocationPositionError.PERMISSION_DENIED) {
+          message = 'Locatie toegang geweigerd. Sta locatietoegang toe in je browserinstellingen.'
+        } else if (error.code === GeolocationPositionError.TIMEOUT) {
+          message = 'Locatie ophalen duurde te lang. Probeer het opnieuw.'
+        } else if (error.code === GeolocationPositionError.POSITION_UNAVAILABLE) {
+          message = 'Locatie niet beschikbaar. Controleer je apparaatinstellingen.'
+        }
+        setLocationError(message)
         setIsLocating(false)
       },
       {

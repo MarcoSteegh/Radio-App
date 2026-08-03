@@ -64,6 +64,7 @@ const imageProxyRateState = new Map()
 const observabilityRateState = new Map()
 const imageProxyCache = new Map()
 const imageProxyBlockedLogState = new Map()
+const adminLoginRateState = new Map()
 const imageProxyAllowedHosts = IMAGE_PROXY_ALLOWED_HOSTS
   .split(',')
   .map((item) => item.trim().toLowerCase())
@@ -103,6 +104,13 @@ const enforceObservabilityRateLimit = createRateLimiter({
   errorMessage: 'Too many observability events. Please try again later.',
 })
 
+const enforceAdminLoginRateLimit = createRateLimiter({
+  stateMap: adminLoginRateState,
+  windowMs: 60000,
+  maxRequests: 10,
+  errorMessage: 'Too many login attempts. Please try again later.',
+})
+
 const requireServiceKey = createServiceKeyMiddleware(SERVICE_KEY)
 
 // ─── Routes ─────────────────────────────────────────────────────────────────
@@ -130,7 +138,7 @@ app.post('/api/observability/events', enforceObservabilityRateLimit, observabili
 app.post('/api/observability/errors', enforceObservabilityRateLimit, observabilityRoutes.ingestError)
 
 // ─── Admin Auth ─────────────────────────────────────────────────────────────
-app.post('/api/admin/login', adminAuthRoutes.login)
+app.post('/api/admin/login', enforceAdminLoginRateLimit, adminAuthRoutes.login)
 app.get('/api/admin/auth-status', adminAuthRoutes.authStatusUnprotected)
 app.post('/api/admin/refresh', authService.requireAdminAuth, adminAuthRoutes.refresh)
 app.post('/api/admin/logout', authService.requireAdminAuth, adminAuthRoutes.logout)

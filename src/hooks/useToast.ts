@@ -1,5 +1,7 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import type { Toast } from '../types/station'
+
+let nextToastId = 1
 
 export function useToast() {
   const [toast, setToast] = useState<Toast | null>(null)
@@ -20,7 +22,7 @@ export function useToast() {
 
   const showToast = useCallback((text: string, tone: Toast['tone']) => {
     setToast({
-      id: Date.now(),
+      id: nextToastId++,
       text,
       tone,
     })
