@@ -21,7 +21,7 @@ function FlyToStation({ latitude, longitude, requestKey }: FlyToStationProps) {
       return
     }
 
-    map.flyTo([latitude, longitude], 9, {
+    map.flyTo([latitude, longitude], 14, {
       duration: 1.4,
     })
   }, [latitude, longitude, map, requestKey])
