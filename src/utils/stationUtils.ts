@@ -120,6 +120,28 @@ export function formatOptions(values: string[]): string[] {
   )
 }
 
+export function findFallbackStation(failed: Station, candidates: Station[]): Station | null {
+  const available = candidates.filter((s) => s.stationuuid !== failed.stationuuid)
+  if (available.length === 0) return null
+
+  const failedTags = new Set(failed.tags.toLowerCase().split(',').map((t) => t.trim()).filter(Boolean))
+  let bestScore = -1
+  let best = available[0]
+
+  for (const candidate of available) {
+    let score = 0
+    if (failedTags.size > 0) {
+      for (const tag of candidate.tags.toLowerCase().split(',').map((t) => t.trim()).filter(Boolean)) {
+        if (failedTags.has(tag)) score += 2
+      }
+    }
+    if (candidate.country === failed.country) score += 1
+    if (score > bestScore) { bestScore = score; best = candidate }
+  }
+
+  return best
+}
+
 export function distanceInKm(
   lat1: number,
   lon1: number,
