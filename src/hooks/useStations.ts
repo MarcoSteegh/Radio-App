@@ -7,6 +7,7 @@ import { sanitizeStation, dedupeStationsByUuid, formatOptions } from '../utils/s
 import { fallbackStations } from '../lib/fallbackStations'
 
 const HEALTH_REFRESH_MS = 3 * 60 * 1000
+const MAX_MAP_STATIONS = 5000
 
 async function tryFetchStations(params: {
   term: string
@@ -179,6 +180,7 @@ export function useStations() {
 
   useEffect(() => {
     let isMounted = true
+    const controller = new AbortController()
 
     const loadGeoStations = async () => {
       setIsMapStationsLoading(true)
@@ -187,52 +189,48 @@ export function useStations() {
         const batchSize = 1000
         let offset = 0
         const seenStationIds = new Set<string>()
+        const allStations: Station[] = []
 
-        setMapStations([])
-
-        while (isMounted) {
-          const batch = await tryFetchGeoStations({ offset, limit: batchSize })
+        while (isMounted && allStations.length < MAX_MAP_STATIONS) {
+          const batch = await tryFetchGeoStations({ offset, limit: batchSize, signal: controller.signal })
 
           if (!isMounted) return
 
-          if (!Array.isArray(batch) || batch.length === 0) {
-            if (isMounted) setIsMapStationsLoading(false)
-            return
-          }
+          if (!Array.isArray(batch) || batch.length === 0) break
 
           const parsed = batch
             .map((station) => sanitizeStation(station))
             .filter((station): station is Station => Boolean(station))
 
-          const freshStations: Station[] = []
           for (const station of parsed) {
             if (seenStationIds.has(station.stationuuid)) continue
             seenStationIds.add(station.stationuuid)
-            freshStations.push(station)
+            allStations.push(station)
+            if (allStations.length >= MAX_MAP_STATIONS) break
           }
 
-          if (freshStations.length > 0) {
-            setMapStations((previous) => previous.concat(freshStations))
-          }
-
-          if (batch.length < batchSize) {
-            if (isMounted) setIsMapStationsLoading(false)
-            return
-          }
+          if (batch.length < batchSize) break
 
           offset += batchSize
+        }
+
+        if (isMounted) {
+          setMapStations(allStations)
+          setIsMapStationsLoading(false)
         }
       } catch (err) {
         if (err instanceof ApiError) {
           trackEvent('map_geo_load_failed', { status: err.status, code: err.code ?? '' })
         }
-      } finally {
         if (isMounted) setIsMapStationsLoading(false)
       }
     }
 
     void loadGeoStations()
-    return () => { isMounted = false }
+    return () => {
+      isMounted = false
+      controller.abort()
+    }
   }, [])
 
   const listableStations = useMemo(
