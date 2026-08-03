@@ -112,46 +112,27 @@ function MarkerClusterGroup({ stations, onStationClick }: { stations: Station[];
   return null
 }
 
+function readStoredFilters() {
+  if (typeof window === 'undefined') return { country: 'all', language: 'all', tag: 'all' }
+  const stored = window.localStorage.getItem('radio-filters')
+  if (!stored) return { country: 'all', language: 'all', tag: 'all' }
+  try {
+    const parsed = JSON.parse(stored) as { country?: string; language?: string; tag?: string }
+    return { country: parsed.country ?? 'all', language: parsed.language ?? 'all', tag: parsed.tag ?? 'all' }
+  } catch {
+    return { country: 'all', language: 'all', tag: 'all' }
+  }
+}
+
 function App() {
+  "use no memo"
   const [query, setQuery] = useState(() => {
     if (typeof window === 'undefined') return INITIAL_SEARCH
     return window.localStorage.getItem('radio-search') ?? INITIAL_SEARCH
   })
   const [selectedStation, setSelectedStation] = useState<Station | null>(null)
   const [selectedFlyKey, setSelectedFlyKey] = useState(0)
-  const [countryFilter, setCountryFilter] = useState(() => {
-    if (typeof window === 'undefined') return 'all'
-    const stored = window.localStorage.getItem('radio-filters')
-    if (!stored) return 'all'
-    try {
-      const parsed = JSON.parse(stored) as { country?: string }
-      return parsed.country ?? 'all'
-    } catch {
-      return 'all'
-    }
-  })
-  const [languageFilter, setLanguageFilter] = useState(() => {
-    if (typeof window === 'undefined') return 'all'
-    const stored = window.localStorage.getItem('radio-filters')
-    if (!stored) return 'all'
-    try {
-      const parsed = JSON.parse(stored) as { language?: string }
-      return parsed.language ?? 'all'
-    } catch {
-      return 'all'
-    }
-  })
-  const [tagFilter, setTagFilter] = useState(() => {
-    if (typeof window === 'undefined') return 'all'
-    const stored = window.localStorage.getItem('radio-filters')
-    if (!stored) return 'all'
-    try {
-      const parsed = JSON.parse(stored) as { tag?: string }
-      return parsed.tag ?? 'all'
-    } catch {
-      return 'all'
-    }
-  })
+  const [{ country: countryFilter, language: languageFilter, tag: tagFilter }, setFilters] = useState(readStoredFilters)
   const [showAdmin, setShowAdmin] = useState(false)
   const [showSubmit, setShowSubmit] = useState(false)
   const [isAudioPlaying, setIsAudioPlaying] = useState(false)
@@ -404,9 +385,7 @@ function App() {
   }, [])
 
   const resetFilters = useCallback(() => {
-    setCountryFilter('all')
-    setLanguageFilter('all')
-    setTagFilter('all')
+    setFilters({ country: 'all', language: 'all', tag: 'all' })
   }, [])
 
   const clearSearch = useCallback(() => {
@@ -597,7 +576,7 @@ function App() {
           <div className="filter-grid">
             <label>
               Land
-              <select value={countryFilter} onChange={(event) => setCountryFilter(event.target.value)}>
+              <select value={countryFilter} onChange={(event) => setFilters((f) => ({ ...f, country: event.target.value }))}>
                 <option value="all">Alle landen</option>
                 {countryOptions.map((country) => (
                   <option key={country} value={country}>{country}</option>
@@ -606,7 +585,7 @@ function App() {
             </label>
             <label>
               Taal
-              <select value={languageFilter} onChange={(event) => setLanguageFilter(event.target.value)}>
+              <select value={languageFilter} onChange={(event) => setFilters((f) => ({ ...f, language: event.target.value }))}>
                 <option value="all">Alle talen</option>
                 {languageOptions.map((language) => (
                   <option key={language} value={language}>{language}</option>
@@ -615,7 +594,7 @@ function App() {
             </label>
             <label>
               Tag
-              <select value={tagFilter} onChange={(event) => setTagFilter(event.target.value)}>
+              <select value={tagFilter} onChange={(event) => setFilters((f) => ({ ...f, tag: event.target.value }))}>
                 <option value="all">Alle tags</option>
                 {tagOptions.map((tag) => (
                   <option key={tag} value={tag}>{tag}</option>
