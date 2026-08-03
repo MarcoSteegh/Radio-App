@@ -29,7 +29,7 @@ export function useOfflineStations(stations: Station[], favoritesById: Record<st
 
         return changed ? updated : previous
       })
-    }, 30000)
+    }, 1000)
 
     return () => {
       window.clearTimeout(startupTickId)

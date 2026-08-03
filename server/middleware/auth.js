@@ -176,15 +176,21 @@ export function createAuthService({
   }
 
   function verifyCredentials(username, password) {
-    const usernameBuf = Buffer.from(username)
-    const adminUsernameBuf = Buffer.from(adminUsername)
-    const passwordBuf = Buffer.from(password)
-    const adminPasswordBuf = Buffer.from(adminPassword)
+    const MAX_USERNAME_LEN = 256
+    const MAX_PASSWORD_LEN = 256
 
-    const usernameMatch = usernameBuf.length === adminUsernameBuf.length &&
-      crypto.timingSafeEqual(usernameBuf, adminUsernameBuf)
-    const passwordMatch = passwordBuf.length === adminPasswordBuf.length &&
-      crypto.timingSafeEqual(passwordBuf, adminPasswordBuf)
+    const usernameBuf = Buffer.alloc(MAX_USERNAME_LEN)
+    const adminUsernameBuf = Buffer.alloc(MAX_USERNAME_LEN)
+    Buffer.from(username).copy(usernameBuf)
+    Buffer.from(adminUsername).copy(adminUsernameBuf)
+
+    const passwordBuf = Buffer.alloc(MAX_PASSWORD_LEN)
+    const adminPasswordBuf = Buffer.alloc(MAX_PASSWORD_LEN)
+    Buffer.from(password).copy(passwordBuf)
+    Buffer.from(adminPassword).copy(adminPasswordBuf)
+
+    const usernameMatch = crypto.timingSafeEqual(usernameBuf, adminUsernameBuf)
+    const passwordMatch = crypto.timingSafeEqual(passwordBuf, adminPasswordBuf)
 
     return usernameMatch && passwordMatch
   }

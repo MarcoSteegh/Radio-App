@@ -4,6 +4,11 @@ const OBSERVABILITY_ENABLED =
   String(import.meta.env.VITE_OBSERVABILITY_ENABLED ?? OBSERVABILITY_DEFAULT_ENABLED).toLowerCase() === 'true'
 const SESSION_KEY = 'world-radio-explorer-observability-session-id'
 let observabilityTransportBlocked = false
+let pendingEvents: unknown[] = []
+let flushTimer: ReturnType<typeof setTimeout> | null = null
+
+const FLUSH_INTERVAL_MS = 5000
+const MAX_BATCH_SIZE = 20
 
 function getSessionId() {
   const existing = sessionStorage.getItem(SESSION_KEY)
@@ -18,6 +23,21 @@ function getSessionId() {
 
   sessionStorage.setItem(SESSION_KEY, next)
   return next
+}
+
+function flushEvents() {
+  if (flushTimer) {
+    clearTimeout(flushTimer)
+    flushTimer = null
+  }
+  if (pendingEvents.length === 0) return
+
+  const batch = pendingEvents.splice(0, MAX_BATCH_SIZE)
+  postJson('/observability/events', { events: batch })
+
+  if (pendingEvents.length > 0) {
+    flushTimer = setTimeout(flushEvents, FLUSH_INTERVAL_MS)
+  }
 }
 
 function postJson(path: string, payload: unknown) {
@@ -53,13 +73,17 @@ function postJson(path: string, payload: unknown) {
 export function trackEvent(eventName: string, properties: Record<string, unknown> = {}) {
   if (!eventName) return
 
-  postJson('/observability/events', {
+  pendingEvents.push({
     eventName,
     sessionId: getSessionId(),
     page: window.location.pathname,
     occurredAt: Date.now(),
     properties,
   })
+
+  if (flushTimer === null) {
+    flushTimer = setTimeout(flushEvents, FLUSH_INTERVAL_MS)
+  }
 }
 
 export function trackError(params: {

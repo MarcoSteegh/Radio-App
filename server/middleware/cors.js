@@ -37,17 +37,14 @@ export function createCorsMiddleware(allowedCorsOrigins) {
       return
     }
 
+    const ALLOWED_HEADERS = 'Content-Type,Authorization,x-service-key'
+
     const requestHeaders = req.headers['access-control-request-headers']
     res.setHeader('Access-Control-Allow-Origin', origin)
     res.setHeader('Vary', 'Origin, Access-Control-Request-Headers')
     res.setHeader('Access-Control-Allow-Credentials', 'true')
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,OPTIONS')
-    res.setHeader(
-      'Access-Control-Allow-Headers',
-      typeof requestHeaders === 'string' && requestHeaders
-        ? requestHeaders
-        : 'Content-Type,Authorization,x-service-key',
-    )
+    res.setHeader('Access-Control-Allow-Headers', ALLOWED_HEADERS)
 
     if (req.method === 'OPTIONS') {
       res.status(204).end()

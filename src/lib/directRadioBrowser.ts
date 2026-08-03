@@ -11,7 +11,10 @@ async function directFetch<T>(url: string, signal?: AbortSignal): Promise<T> {
       throw new Error(`Radio Browser API error: ${response.status}`)
     }
     return response.json() as Promise<T>
-  } catch {
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw err
+    }
     return fallbackStations as T
   }
 }
