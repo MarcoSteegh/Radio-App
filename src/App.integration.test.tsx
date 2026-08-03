@@ -147,6 +147,48 @@ describe('App integration', () => {
     vi.unstubAllGlobals()
   })
 
+  it('restores saved search and filter preferences after remount', async () => {
+    localStorage.setItem('radio-search', 'jazz')
+    localStorage.setItem(
+      'radio-filters',
+      JSON.stringify({ country: 'Belgium', language: 'french', tag: 'pop' }),
+    )
+
+    render(<App />)
+
+    const searchInput = screen.getByLabelText('Zoek station, genre of stad') as HTMLInputElement
+    const countrySelect = screen.getByLabelText('Land') as HTMLSelectElement
+    const languageSelect = screen.getByLabelText('Taal') as HTMLSelectElement
+    const tagSelect = screen.getByLabelText('Tag') as HTMLSelectElement
+
+    await waitFor(() => {
+      expect(searchInput.value).toBe('jazz')
+      expect(countrySelect.value).toBe('Belgium')
+      expect(languageSelect.value).toBe('french')
+      expect(tagSelect.value).toBe('pop')
+    })
+  })
+
+  it('toggles between dark and light mode', async () => {
+    render(<App />)
+
+    const toggleButton = screen.getByRole('button', { name: /licht|donker/i })
+    expect(toggleButton).toBeInTheDocument()
+    expect(document.querySelector('.app-shell')?.getAttribute('data-theme')).toBe('dark')
+
+    fireEvent.click(toggleButton)
+
+    await waitFor(() => {
+      expect(document.querySelector('.app-shell')?.getAttribute('data-theme')).toBe('light')
+    })
+
+    fireEvent.click(toggleButton)
+
+    await waitFor(() => {
+      expect(document.querySelector('.app-shell')?.getAttribute('data-theme')).toBe('dark')
+    })
+  })
+
   it('resets country, language and tag filters to all', async () => {
     render(<App />)
 
@@ -248,6 +290,33 @@ describe('App integration', () => {
     createObjectURLMock.mockRestore()
     revokeObjectURLMock.mockRestore()
     anchorClickMock.mockRestore()
+  })
+
+  it('shows recovery feedback when a station becomes healthy again after an error', async () => {
+    render(<App />)
+
+    await waitFor(() => {
+      expect(document.querySelector('audio')).not.toBeNull()
+    })
+
+    const audio = document.querySelector('audio')
+    expect(audio).not.toBeNull()
+    if (!audio) {
+      throw new Error('Audio element not found')
+    }
+
+    fireEvent.error(audio)
+
+    await waitFor(() => {
+      expect(screen.getByText(/tijdelijk verborgen wegens streamfouten/i)).toBeInTheDocument()
+    })
+
+    const restoreBtn = screen.getByRole('button', { name: /Herstel Jazz NL/i })
+    fireEvent.click(restoreBtn)
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/stream werkt weer/i).length).toBeGreaterThan(0)
+    })
   })
 
   it('marks station offline on audio error and restores it manually', async () => {

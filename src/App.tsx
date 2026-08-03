@@ -39,9 +39,11 @@ const escapeHtml: EscapeHtml = (input) =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
 
-function MarkerClusterGroup({ stations }: { stations: Station[] }) {
+function MarkerClusterGroup({ stations, onStationClick }: { stations: Station[]; onStationClick?: (station: Station) => void }) {
   const map = useMap()
   const clusterRef = useRef<L.MarkerClusterGroup | null>(null)
+  const callbackRef = useRef(onStationClick)
+  useEffect(() => { callbackRef.current = onStationClick })
 
   useEffect(() => {
     if (clusterRef.current) {
@@ -91,6 +93,7 @@ function MarkerClusterGroup({ stations }: { stations: Station[] }) {
       const popupContent = `<strong>${safeName}</strong><div>${safeCountry}${safeState ? `, ${safeState}` : ''}</div>`
       marker.bindPopup(popupContent)
       marker.bindTooltip(popupContent, { direction: 'top', offset: L.point(0, -8) })
+      marker.on('click', () => callbackRef.current?.(station))
 
       clusterGroup.addLayer(marker)
     }
@@ -110,19 +113,59 @@ function MarkerClusterGroup({ stations }: { stations: Station[] }) {
 }
 
 function App() {
-  const [query, setQuery] = useState(INITIAL_SEARCH)
+  const [query, setQuery] = useState(() => {
+    if (typeof window === 'undefined') return INITIAL_SEARCH
+    return window.localStorage.getItem('radio-search') ?? INITIAL_SEARCH
+  })
   const [selectedStation, setSelectedStation] = useState<Station | null>(null)
   const [selectedFlyKey, setSelectedFlyKey] = useState(0)
-  const [countryFilter, setCountryFilter] = useState('all')
-  const [languageFilter, setLanguageFilter] = useState('all')
-  const [tagFilter, setTagFilter] = useState('all')
+  const [countryFilter, setCountryFilter] = useState(() => {
+    if (typeof window === 'undefined') return 'all'
+    const stored = window.localStorage.getItem('radio-filters')
+    if (!stored) return 'all'
+    try {
+      const parsed = JSON.parse(stored) as { country?: string }
+      return parsed.country ?? 'all'
+    } catch {
+      return 'all'
+    }
+  })
+  const [languageFilter, setLanguageFilter] = useState(() => {
+    if (typeof window === 'undefined') return 'all'
+    const stored = window.localStorage.getItem('radio-filters')
+    if (!stored) return 'all'
+    try {
+      const parsed = JSON.parse(stored) as { language?: string }
+      return parsed.language ?? 'all'
+    } catch {
+      return 'all'
+    }
+  })
+  const [tagFilter, setTagFilter] = useState(() => {
+    if (typeof window === 'undefined') return 'all'
+    const stored = window.localStorage.getItem('radio-filters')
+    if (!stored) return 'all'
+    try {
+      const parsed = JSON.parse(stored) as { tag?: string }
+      return parsed.tag ?? 'all'
+    } catch {
+      return 'all'
+    }
+  })
   const [showAdmin, setShowAdmin] = useState(false)
   const [showSubmit, setShowSubmit] = useState(false)
   const [isAudioPlaying, setIsAudioPlaying] = useState(false)
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    if (typeof window === 'undefined') return 'dark'
+    const stored = window.localStorage.getItem('radio-theme')
+    return stored === 'light' ? 'light' : 'dark'
+  })
 
   const searchDebounceTimerRef = useRef<number | null>(null)
   const importInputRef = useRef<HTMLInputElement | null>(null)
   const virtualScrollRef = useRef<HTMLDivElement | null>(null)
+  const [recoveryMessage, setRecoveryMessage] = useState<string | null>(null)
+  const lastFailedStationRef = useRef<{ uuid: string; name: string } | null>(null)
 
   const { toast, showToast, dismissToast } = useToast()
   const { stations, mapStations, isLoading, error, listableStations, countryOptions, languageOptions, tagOptions, loadStations } = useStations()
@@ -144,8 +187,8 @@ function App() {
     [clockTick, offlineUntilById, listableStations],
   )
 
-  const filteredStations = useMemo(() => {
-    return healthyStations.filter((station) => {
+  const matchesActiveFilters = useCallback(
+    (station: Station) => {
       const matchesCountry = countryFilter === 'all' || station.country === countryFilter
 
       const stationLanguages = station.language
@@ -158,8 +201,19 @@ function App() {
       const matchesTag = tagFilter === 'all' || stationTags.includes(tagFilter)
 
       return matchesCountry && matchesLanguage && matchesTag
-    })
-  }, [countryFilter, healthyStations, languageFilter, tagFilter])
+    },
+    [countryFilter, languageFilter, tagFilter],
+  )
+
+  const filteredStations = useMemo(
+    () => healthyStations.filter(matchesActiveFilters),
+    [healthyStations, matchesActiveFilters],
+  )
+
+  const filteredRecentlyPlayed = useMemo(
+    () => recentlyPlayed.filter(matchesActiveFilters),
+    [matchesActiveFilters, recentlyPlayed],
+  )
 
   const nearbyStations = useMemo<NearbyStation[]>(() => {
     if (!userLocation) return []
@@ -188,6 +242,8 @@ function App() {
   const onStationOffline = useCallback(
     (station: Station) => {
       const shouldToast = markStationOffline(station)
+      lastFailedStationRef.current = { uuid: station.stationuuid, name: station.name }
+      setRecoveryMessage(null)
       if (shouldToast) {
         showToast(`${station.name} lijkt offline en wordt tijdelijk verborgen.`, 'error')
       }
@@ -232,6 +288,21 @@ function App() {
   useEffect(() => {
     playStationRef.current = playStation
   }, [playStation])
+
+  useEffect(() => {
+    window.localStorage.setItem('radio-theme', theme)
+  }, [theme])
+
+  useEffect(() => {
+    window.localStorage.setItem('radio-search', query)
+  }, [query])
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      'radio-filters',
+      JSON.stringify({ country: countryFilter, language: languageFilter, tag: tagFilter }),
+    )
+  }, [countryFilter, languageFilter, tagFilter])
 
   useEffect(() => {
     if (stations.length > 0 && stations[0]?.stationuuid?.startsWith('fallback-')) {
@@ -279,6 +350,16 @@ function App() {
         const message = `Kan ${station.name} niet op de kaart centreren: locatie ontbreekt.`
         setFallbackMessage(null)
         showToast(message, 'info')
+      }
+      const wasFailed = lastFailedStationRef.current?.uuid === station.stationuuid
+      lastFailedStationRef.current = null
+
+      if (wasFailed) {
+        const nextMessage = `Stream werkt weer voor ${station.name}.`
+        setRecoveryMessage(nextMessage)
+        showToast(nextMessage, 'success')
+      } else {
+        setRecoveryMessage(null)
       }
       addToRecentlyPlayed(station)
       playStation(station)
@@ -328,14 +409,32 @@ function App() {
     setTagFilter('all')
   }, [])
 
+  const clearSearch = useCallback(() => {
+    setQuery(INITIAL_SEARCH)
+    void loadStations(INITIAL_SEARCH)
+  }, [loadStations])
+
   const restoreOfflineStation = useCallback(
     (stationId: string) => {
       const station = stations.find((s) => s.stationuuid === stationId) ?? Object.values(favoritesById).find((s) => s.stationuuid === stationId)
       if (station) {
         markStationHealthy(station)
+        const wasFailed = lastFailedStationRef.current?.uuid === station.stationuuid
+        if (wasFailed) {
+          const nextMessage = `Stream werkt weer voor ${station.name}.`
+          setRecoveryMessage(nextMessage)
+          showToast(nextMessage, 'success')
+          lastFailedStationRef.current = null
+        }
+        setSelectedStation(station)
+        setSelectedFlyKey((k) => k + 1)
+        playStation(station)
+        if (isCastAvailable && castDeviceName) {
+          void castToStation(station)
+        }
       }
     },
-    [stations, favoritesById, markStationHealthy],
+    [stations, favoritesById, markStationHealthy, isCastAvailable, castDeviceName, castToStation, playStation, showToast],
   )
 
   const handleConnectGoogleHome = useCallback(() => {
@@ -406,45 +505,67 @@ function App() {
   )
 
   return (
-    <main className="app-shell">
+    <main className="app-shell" data-theme={theme}>
       <header className="app-header">
-        <div>
-          <p className="eyebrow">Marco Steegh</p>
-          <h1>World Radio Explorer</h1>
-          <p className="subtitle">Ontdek radiostations op de kaart en luister direct live.</p>
+        <div className="brand-panel">
+          <div className="brand-top-row">
+            <div>
+              <p className="eyebrow">Marco Steegh</p>
+              <h1>World Radio Explorer</h1>
+              <p className="subtitle">Ontdek radiostations op de kaart en luister direct live.</p>
+            </div>
+            <button type="button" className="theme-toggle" onClick={() => setTheme((current) => (current === 'dark' ? 'light' : 'dark'))}>
+              {theme === 'dark' ? '☀️ Licht' : '🌙 Donker'}
+            </button>
+          </div>
         </div>
-        <form className="search" onSubmit={onSearch}>
-          <label htmlFor="station-search">Zoek station, genre of stad (laat leeg voor wereldwijd)</label>
-          <div className="search-row">
+        <form className="search search-panel" onSubmit={onSearch}>
+          <label htmlFor="station-search">Zoek station, genre of stad</label>
+          <div className="search-row search-row-main">
             <input
               id="station-search"
               value={query}
               onChange={(event) => onQueryChange(event.target.value)}
-              placeholder="bijv. funk, amsterdam, news (of leeg)"
+              placeholder="bijv. funk, amsterdam, news"
+              aria-describedby="search-help"
             />
             <button type="submit" disabled={isLoading}>
               {isLoading ? 'Laden...' : 'Zoeken'}
             </button>
-            <button type="button" className="secondary-btn" disabled={isLocating} onClick={locateUser}>
-              {isLocating ? 'Locatie...' : 'Gebruik mijn locatie'}
-            </button>
-            <button type="button" className="secondary-btn" disabled={isBluetoothConnecting} onClick={() => void connectBluetoothDevice()}>
-              {isBluetoothConnecting ? 'Bluetooth...' : 'Koppel Bluetooth'}
-            </button>
-            <button type="button" className="secondary-btn" disabled={isCasting} onClick={handleConnectGoogleHome}>
-              {isCasting ? 'Google Home...' : 'Koppel Google Home'}
-            </button>
-            {castError && castDeviceName === null ? (
-              <button type="button" className="secondary-btn" disabled={isCastLoading} onClick={handleRefreshCastSession}>
-                {isCastLoading ? 'Vernieuwen...' : 'Vernieuw Cast'}
+            {query ? (
+              <button type="button" className="secondary-btn" onClick={clearSearch}>
+                Wis
               </button>
             ) : null}
-            <button type="button" className="secondary-btn" onClick={() => setShowSubmit(true)}>
-              Station toevoegen
-            </button>
-            <button type="button" className="secondary-btn" onClick={() => setShowAdmin((v) => !v)}>
-              {showAdmin ? 'Sluit admin' : 'Admin'}
-            </button>
+          </div>
+          <p id="search-help" className="helper subtle">
+            Zoekopdracht en filters worden opgeslagen in je browser.
+          </p>
+          <div className="toolbar-row">
+            <div className="toolbar-group">
+              <button type="button" className="secondary-btn" disabled={isLocating} onClick={locateUser}>
+                {isLocating ? 'Locatie...' : 'Mijn locatie'}
+              </button>
+              <button type="button" className="secondary-btn" disabled={isBluetoothConnecting} onClick={() => void connectBluetoothDevice()}>
+                {isBluetoothConnecting ? 'Bluetooth...' : 'Bluetooth'}
+              </button>
+              <button type="button" className="secondary-btn" disabled={isCasting} onClick={handleConnectGoogleHome}>
+                {isCasting ? 'Google Home...' : 'Google Home'}
+              </button>
+              {castError && castDeviceName === null ? (
+                <button type="button" className="secondary-btn" disabled={isCastLoading} onClick={handleRefreshCastSession}>
+                  {isCastLoading ? 'Vernieuwen...' : 'Cast'}
+                </button>
+              ) : null}
+            </div>
+            <div className="toolbar-group">
+              <button type="button" className="secondary-btn" onClick={() => setShowSubmit(true)}>
+                Station toevoegen
+              </button>
+              <button type="button" className="secondary-btn" onClick={() => setShowAdmin((v) => !v)}>
+                {showAdmin ? 'Sluit admin' : 'Admin'}
+              </button>
+            </div>
           </div>
           <div className="filter-actions">
             <button type="button" className="secondary-btn" onClick={resetFilters}>
@@ -454,23 +575,25 @@ function App() {
               Check offline opnieuw
             </button>
           </div>
-          {locationError ? <p className="helper error-text">{locationError}</p> : null}
-          {userLocation ? (
-            <p className="helper">
-              Locatie actief: {userLocation.lat.toFixed(2)}, {userLocation.lng.toFixed(2)}
+          <div className="status-stack">
+            {locationError ? <p className="helper error-text">{locationError}</p> : null}
+            {userLocation ? (
+              <p className="helper">
+                Locatie actief: {userLocation.lat.toFixed(2)}, {userLocation.lng.toFixed(2)}
+              </p>
+            ) : null}
+            {bluetoothDeviceName ? <p className="helper">Bluetooth gekoppeld: {bluetoothDeviceName}</p> : null}
+            {bluetoothError ? <p className="helper error-text">{bluetoothError}</p> : null}
+            {castDeviceName ? <p className="helper">Google Home gekoppeld: {castDeviceName}</p> : null}
+            {castError ? <p className="helper error-text">{castError}</p> : null}
+            {isCastLoading && !isCastAvailable ? <p className="helper">Google Cast initialiseert...</p> : null}
+            {activeOfflineCount > 0 ? (
+              <p className="helper">{activeOfflineCount} stations tijdelijk verborgen wegens streamfouten.</p>
+            ) : null}
+            <p className={`helper ${dataStatus === 'fallback' ? 'error-text' : ''}`}>
+              {dataStatus === 'fallback' ? 'Gebruik lokale fallback-data vanwege API-problemen.' : 'Live data actief.'}
             </p>
-          ) : null}
-          {bluetoothDeviceName ? <p className="helper">Bluetooth gekoppeld: {bluetoothDeviceName}</p> : null}
-          {bluetoothError ? <p className="helper error-text">{bluetoothError}</p> : null}
-          {castDeviceName ? <p className="helper">Google Home gekoppeld: {castDeviceName}</p> : null}
-          {castError ? <p className="helper error-text">{castError}</p> : null}
-          {isCastLoading && !isCastAvailable ? <p className="helper">Google Cast initialiseert...</p> : null}
-          {activeOfflineCount > 0 ? (
-            <p className="helper">{activeOfflineCount} stations tijdelijk verborgen wegens streamfouten.</p>
-          ) : null}
-          <p className={`helper ${dataStatus === 'fallback' ? 'error-text' : ''}`}>
-            {dataStatus === 'fallback' ? 'Gebruik lokale fallback-data vanwege API-problemen.' : 'Live data actief.'}
-          </p>
+          </div>
           <div className="filter-grid">
             <label>
               Land
@@ -518,7 +641,7 @@ function App() {
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
-            <MarkerClusterGroup stations={mapStations} />
+            <MarkerClusterGroup stations={mapStations} onStationClick={onSelectStation} />
             <FlyToStation
               latitude={selectedStation?.geo_lat ?? null}
               longitude={selectedStation?.geo_long ?? null}
@@ -542,6 +665,12 @@ function App() {
           {fallbackMessage ? (
             <p className="helper error-text" role="status">
               {fallbackMessage}
+            </p>
+          ) : null}
+
+          {recoveryMessage ? (
+            <p className="helper success-text" role="status">
+              {recoveryMessage}
             </p>
           ) : null}
 
@@ -583,7 +712,16 @@ function App() {
                 src={selectedStation.url_resolved}
                 aria-label={selectedStation.name}
                 onError={() => onStationOffline(selectedStation)}
-                onCanPlay={() => markStationHealthy(selectedStation)}
+                onCanPlay={() => {
+                  markStationHealthy(selectedStation)
+                  const failed = lastFailedStationRef.current
+                  if (failed) {
+                    const nextMessage = `Stream werkt weer voor ${failed.name}.`
+                    setRecoveryMessage(nextMessage)
+                    showToast(nextMessage, 'success')
+                    lastFailedStationRef.current = null
+                  }
+                }}
                 onPlay={() => setIsAudioPlaying(true)}
                 onPause={() => setIsAudioPlaying(false)}
               >
@@ -622,21 +760,29 @@ function App() {
                 </div>
               )}
 
-              {recentlyPlayed.length > 0 && (
+              {filteredRecentlyPlayed.length > 0 && (
                 <section className="station-section">
                   <h3>Recent gespeeld</h3>
-                  {recentlyPlayed.map((station) => (
+                  {filteredRecentlyPlayed.map((station) => (
                     <div className="station-row" key={`recent-${station.stationuuid}`}>
                       <button
                         type="button"
                         className={station.stationuuid === selectedStation?.stationuuid ? 'station active' : 'station'}
                         onClick={() => onSelectStation(station)}
                       >
-                        <span>{station.name}</span>
-                        <small>{station.country}</small>
+                        <span className="station-marker" aria-hidden="true" />
+                        <span className="station-text">
+                          <span className="station-title">{station.name}</span>
+                          <small>{station.country}</small>
+                        </span>
                       </button>
-                      <button type="button" className="mini-action" onClick={() => toggleFavorite(station)}>
-                        {favoriteIdSet.has(station.stationuuid) ? 'Unfav' : 'Fav'}
+                      <button
+                        type="button"
+                        className="mini-action"
+                        onClick={() => toggleFavorite(station)}
+                        aria-label={favoriteIdSet.has(station.stationuuid) ? `Verwijder favoriet van ${station.name}` : `Voeg ${station.name} toe aan favorieten`}
+                      >
+                        {favoriteIdSet.has(station.stationuuid) ? '★' : '☆'}
                       </button>
                     </div>
                   ))}
@@ -659,12 +805,19 @@ function App() {
             ) : null}
 
             {!isLoading && filteredStations.length === 0 ? (
-              <section className="empty-state">
+              <section className="empty-state" role="status" aria-live="polite">
                 <h3>Geen resultaten met deze filters</h3>
-                <p>Probeer een andere zoekterm of reset de filters om meer stations te zien.</p>
-                <button type="button" className="secondary-btn" onClick={resetFilters}>
-                  Reset filters
-                </button>
+                <p>Probeer een andere zoekterm, verander de filters of wis de zoekopdracht om meer stations te zien.</p>
+                <div className="empty-state-actions">
+                  <button type="button" className="secondary-btn" onClick={resetFilters}>
+                    Reset filters
+                  </button>
+                  {query ? (
+                    <button type="button" className="secondary-btn" onClick={clearSearch}>
+                      Wis zoekopdracht
+                    </button>
+                  ) : null}
+                </div>
               </section>
             ) : null}
 
@@ -674,14 +827,17 @@ function App() {
                 {offlineStations.map((item) => (
                   <div className="station-row" key={`offline-${item.station.stationuuid}`}>
                     <button type="button" className="station" onClick={() => onSelectStation(item.station)}>
-                      <span>{item.station.name}</span>
-                      <small>
-                        {item.station.country} · opnieuw over{' '}
-                        <OfflineCountdown offlineUntil={item.offlineUntil} onExpire={() => restoreOfflineStation(item.station.stationuuid)} />
-                      </small>
+                      <span className="station-marker" aria-hidden="true" />
+                      <span className="station-text">
+                        <span className="station-title">{item.station.name}</span>
+                        <small>
+                          {item.station.country} · opnieuw over{' '}
+                          <OfflineCountdown offlineUntil={item.offlineUntil} onExpire={() => restoreOfflineStation(item.station.stationuuid)} />
+                        </small>
+                      </span>
                     </button>
-                    <button type="button" className="mini-action" onClick={() => restoreOfflineStation(item.station.stationuuid)}>
-                      Herstel
+                    <button type="button" className="mini-action" onClick={() => restoreOfflineStation(item.station.stationuuid)} aria-label={`Herstel ${item.station.name}`}>
+                      ↺
                     </button>
                   </div>
                 ))}
@@ -698,11 +854,19 @@ function App() {
                       className={station.stationuuid === selectedStation?.stationuuid ? 'station active' : 'station'}
                       onClick={() => onSelectStation(station)}
                     >
-                      <span>{station.name}</span>
-                      <small>{station.country}</small>
+                      <span className="station-marker" aria-hidden="true" />
+                      <span className="station-text">
+                        <span className="station-title">{station.name}</span>
+                        <small>{station.country}</small>
+                      </span>
                     </button>
-                    <button type="button" className="mini-action" onClick={() => toggleFavorite(station)}>
-                      Unfav
+                    <button
+                      type="button"
+                      className="mini-action"
+                      onClick={() => toggleFavorite(station)}
+                      aria-label={favoriteIdSet.has(station.stationuuid) ? `Verwijder favoriet van ${station.name}` : `Voeg ${station.name} toe aan favorieten`}
+                    >
+                      ★
                     </button>
                   </div>
                 ))}
@@ -719,13 +883,21 @@ function App() {
                       className={station.stationuuid === selectedStation?.stationuuid ? 'station active' : 'station'}
                       onClick={() => onSelectStation(station)}
                     >
-                      <span>{station.name}</span>
-                      <small>
-                        {station.country} · {station.distanceKm.toFixed(0)} km
-                      </small>
+                      <span className="station-marker" aria-hidden="true" />
+                      <span className="station-text">
+                        <span className="station-title">{station.name}</span>
+                        <small>
+                          {station.country} · {station.distanceKm.toFixed(0)} km
+                        </small>
+                      </span>
                     </button>
-                    <button type="button" className="mini-action" onClick={() => toggleFavorite(station)}>
-                      {favoriteIdSet.has(station.stationuuid) ? 'Unfav' : 'Fav'}
+                    <button
+                      type="button"
+                      className="mini-action"
+                      onClick={() => toggleFavorite(station)}
+                      aria-label={favoriteIdSet.has(station.stationuuid) ? `Verwijder favoriet van ${station.name}` : `Voeg ${station.name} toe aan favorieten`}
+                    >
+                      {favoriteIdSet.has(station.stationuuid) ? '★' : '☆'}
                     </button>
                   </div>
                 ))}
@@ -757,13 +929,21 @@ function App() {
                             className={station.stationuuid === selectedStation?.stationuuid ? 'station active' : 'station'}
                             onClick={() => onSelectStation(station)}
                           >
-                            <span>{station.name}</span>
-                            <small>
-                              {station.country} · {station.clickcount} plays
-                            </small>
+                            <span className="station-marker" aria-hidden="true" />
+                            <span className="station-text">
+                              <span className="station-title">{station.name}</span>
+                              <small>
+                                {station.country} · {station.clickcount} plays
+                              </small>
+                            </span>
                           </button>
-                          <button type="button" className="mini-action" onClick={() => toggleFavorite(station)}>
-                            {favoriteIdSet.has(station.stationuuid) ? 'Unfav' : 'Fav'}
+                          <button
+                            type="button"
+                            className="mini-action"
+                            onClick={() => toggleFavorite(station)}
+                            aria-label={favoriteIdSet.has(station.stationuuid) ? `Verwijder favoriet van ${station.name}` : `Voeg ${station.name} toe aan favorieten`}
+                          >
+                            {favoriteIdSet.has(station.stationuuid) ? '★' : '☆'}
                           </button>
                         </div>
                       )
