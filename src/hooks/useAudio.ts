@@ -18,10 +18,15 @@ export function useAudio(
   const playStartTrackedIdRef = useRef<string | null>(null)
   const play3MinTimerRef = useRef<number | null>(null)
   const requestedStationRef = useRef<Station | null>(null)
+  const selectedStationRef = useRef(selectedStation)
   const optionsRef = useRef(options)
 
   useEffect(() => {
     optionsRef.current = options
+  })
+
+  useEffect(() => {
+    selectedStationRef.current = selectedStation
   })
 
   const clearPlay3MinTimer = useCallback(() => {
@@ -39,28 +44,29 @@ export function useAudio(
 
   const onAudioPlaying = useCallback(() => {
     optionsRef.current.setIsAudioPlaying(true)
-    if (!selectedStation) return
+    const current = selectedStationRef.current
+    if (!current) return
 
-    const stationId = selectedStation.stationuuid
+    const stationId = current.stationuuid
     if (playStartTrackedIdRef.current !== stationId) {
       playStartTrackedIdRef.current = stationId
       trackEvent('play_start', {
         stationuuid: stationId,
-        country: selectedStation.country,
+        country: current.country,
       })
     }
 
     clearPlay3MinTimer()
     play3MinTimerRef.current = window.setTimeout(() => {
-      if (selectedStation?.stationuuid === stationId) {
+      if (selectedStationRef.current?.stationuuid === stationId) {
         trackEvent('play_3min', {
           stationuuid: stationId,
-          country: selectedStation.country,
+          country: current.country,
         })
       }
       play3MinTimerRef.current = null
     }, 180000)
-  }, [selectedStation, clearPlay3MinTimer])
+  }, [clearPlay3MinTimer])
 
   const onAudioPauseLike = useCallback(() => {
     optionsRef.current.setIsAudioPlaying(false)
@@ -68,10 +74,10 @@ export function useAudio(
   }, [clearPlay3MinTimer])
 
   const onAudioError = useCallback(() => {
-    const current = requestedStationRef.current ?? selectedStation
+    const current = requestedStationRef.current ?? selectedStationRef.current
     if (!current) return
     optionsRef.current.onStationOffline(current)
-  }, [selectedStation])
+  }, [])
 
   const playStation = useCallback((station: Station) => {
     requestedStationRef.current = station

@@ -38,7 +38,8 @@ export function useOfflineStations(stations: Station[], favoritesById: Record<st
   }, [])
 
   const markStationOffline = useCallback((station: Station) => {
-    let shouldShowToast = false
+    const shouldShowToast =
+      !offlineUntilById[station.stationuuid] || offlineUntilById[station.stationuuid] <= Date.now()
 
     setOfflineUntilById((previous) => {
       const currentUntil = previous[station.stationuuid]
@@ -48,8 +49,6 @@ export function useOfflineStations(stations: Station[], favoritesById: Record<st
         return previous
       }
 
-      shouldShowToast = true
-
       return {
         ...previous,
         [station.stationuuid]: now + STATION_RECHECK_MS,
@@ -57,7 +56,7 @@ export function useOfflineStations(stations: Station[], favoritesById: Record<st
     })
 
     return shouldShowToast
-  }, [])
+  }, [offlineUntilById])
 
   const markStationHealthy = useCallback((station: Station) => {
     setOfflineUntilById((previous) => {
