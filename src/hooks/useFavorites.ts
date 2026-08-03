@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import type { Station } from '../types/station'
 
 const FAVORITES_KEY = 'world-radio-explorer-favorites'
@@ -82,8 +82,8 @@ export function useFavorites() {
     })
   }, [])
 
-  const favoriteIdSet = new Set(Object.keys(favoritesById))
-  const favoriteStations = Object.values(favoritesById)
+  const favoriteIdSet = useMemo(() => new Set(Object.keys(favoritesById)), [favoritesById])
+  const favoriteStations = useMemo(() => Object.values(favoritesById), [favoritesById])
 
   return {
     favoritesById,

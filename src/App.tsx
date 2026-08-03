@@ -6,7 +6,7 @@ import 'leaflet.markercluster'
 import 'leaflet/dist/leaflet.css'
 import 'leaflet.markercluster/dist/MarkerCluster.css'
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css'
-import { MapContainer, TileLayer, useMap } from 'react-leaflet'
+import { CircleMarker, MapContainer, TileLayer, useMap } from 'react-leaflet'
 import FlyToStation from './components/FlyToStation'
 import OfflineCountdown from './components/OfflineCountdown'
 import { useAudio } from './hooks/useAudio'
@@ -38,6 +38,31 @@ const escapeHtml: EscapeHtml = (input) =>
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
+
+function findFallbackStation(failed: Station, candidates: Station[]): Station | null {
+  const available = candidates.filter((s) => s.stationuuid !== failed.stationuuid)
+  if (available.length === 0) return null
+
+  const failedTags = new Set(failed.tags.toLowerCase().split(',').map((t) => t.trim()).filter(Boolean))
+
+  let bestScore = -1
+  let best = available[0]
+  for (const candidate of available) {
+    let score = 0
+    if (failedTags.size > 0) {
+      const candidateTags = candidate.tags.toLowerCase().split(',').map((t) => t.trim()).filter(Boolean)
+      for (const tag of candidateTags) {
+        if (failedTags.has(tag)) score += 2
+      }
+    }
+    if (candidate.country === failed.country) score += 1
+    if (score > bestScore) {
+      bestScore = score
+      best = candidate
+    }
+  }
+  return best
+}
 
 function MarkerClusterGroup({ stations, onStationClick }: { stations: Station[]; onStationClick?: (station: Station) => void }) {
   const map = useMap()
@@ -229,7 +254,7 @@ function App() {
         showToast(`${station.name} lijkt offline en wordt tijdelijk verborgen.`, 'error')
       }
 
-      const fallbackStation = filteredStations.find((candidate) => candidate.stationuuid !== station.stationuuid)
+      const fallbackStation = findFallbackStation(station, filteredStations)
       if (fallbackStation) {
         setFallbackMessage(null)
         showToast(`Schakel over naar alternatief: ${fallbackStation.name}`, 'info')
@@ -269,6 +294,17 @@ function App() {
   useEffect(() => {
     playStationRef.current = playStation
   }, [playStation])
+
+  useEffect(() => {
+    return () => {
+      const audio = audioRef.current
+      if (audio) {
+        audio.pause()
+        audio.removeAttribute('src')
+        audio.load()
+      }
+    }
+  }, [audioRef])
 
   useEffect(() => {
     window.localStorage.setItem('radio-theme', theme)
@@ -325,9 +361,9 @@ function App() {
       const hasCoordinates = station.geo_lat !== null && station.geo_long !== null
 
       setSelectedStation(station)
-      if (isDifferentStation && hasCoordinates) {
+      if (hasCoordinates) {
         setSelectedFlyKey((k) => k + 1)
-      } else if (isDifferentStation && !hasCoordinates) {
+      } else if (isDifferentStation) {
         const message = `Kan ${station.name} niet op de kaart centreren: locatie ontbreekt.`
         setFallbackMessage(null)
         showToast(message, 'info')
@@ -505,7 +541,7 @@ function App() {
               id="station-search"
               value={query}
               onChange={(event) => onQueryChange(event.target.value)}
-              placeholder="bijv. funk, amsterdam, news"
+              placeholder="bijv. rock, Malaga, news" 
               aria-describedby="search-help"
             />
             <button type="submit" disabled={isLoading}>
@@ -611,7 +647,7 @@ function App() {
             center={DEFAULT_CENTER}
             zoom={2}
             minZoom={2}
-            maxZoom={10}
+            maxZoom={18}
             scrollWheelZoom
             className="map"
             worldCopyJump
@@ -621,6 +657,13 @@ function App() {
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
             <MarkerClusterGroup stations={mapStations} onStationClick={onSelectStation} />
+            {selectedStation?.geo_lat != null && selectedStation?.geo_long != null && (
+              <CircleMarker
+                center={[selectedStation.geo_lat, selectedStation.geo_long]}
+                radius={10}
+                pathOptions={{ color: '#ffffff', fillColor: '#e74c3c', fillOpacity: 1, weight: 2 }}
+              />
+            )}
             <FlyToStation
               latitude={selectedStation?.geo_lat ?? null}
               longitude={selectedStation?.geo_long ?? null}
