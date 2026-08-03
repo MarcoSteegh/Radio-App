@@ -406,7 +406,7 @@ describe('App integration', () => {
     })
   })
 
-  it('recenters the map only when switching to a different station', async () => {
+  it('recenters the map when selecting a station with coordinates', async () => {
     render(<App />)
 
     await waitFor(() => {
@@ -419,7 +419,7 @@ describe('App integration', () => {
     fireEvent.click(popStationButton)
 
     await waitFor(() => {
-      expect(mockLeafletMap.flyTo).toHaveBeenCalledWith([50.85, 4.35], 9, {
+      expect(mockLeafletMap.flyTo).toHaveBeenCalledWith([50.85, 4.35], 14, {
         duration: 1.4,
       })
     })
@@ -428,7 +428,9 @@ describe('App integration', () => {
 
     fireEvent.click(getStationButton('Pop BE'))
 
-    expect(mockLeafletMap.flyTo).toHaveBeenCalledTimes(initialFlyToCount + 1)
+    await waitFor(() => {
+      expect(mockLeafletMap.flyTo).toHaveBeenCalledTimes(initialFlyToCount + 2)
+    })
   })
 
   it('shows a toast and keeps the map in place when the selected station has no coordinates', async () => {
