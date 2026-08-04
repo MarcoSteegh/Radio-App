@@ -2,6 +2,8 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import type { Station } from '../types/station'
 import { trackEvent } from '../lib/observability'
 
+const hasAudioContext = typeof AudioContext !== 'undefined' || typeof (globalThis as Record<string, unknown>).webkitAudioContext !== 'undefined'
+
 export function useAudio(
   selectedStation: Station | null,
   options: {
@@ -13,13 +15,19 @@ export function useAudio(
   },
 ) {
   const audioRef = useRef<HTMLAudioElement | null>(null)
-  const [volume, setVolume] = useState(0.4)
+  const [volume, setVolumeState] = useState(0.4)
+  const volumeRef = useRef(0.4)
   const didManualPlayRef = useRef(false)
   const playStartTrackedIdRef = useRef<string | null>(null)
   const play3MinTimerRef = useRef<number | null>(null)
   const requestedStationRef = useRef<Station | null>(null)
   const selectedStationRef = useRef(selectedStation)
   const optionsRef = useRef(options)
+
+  const audioCtxRef = useRef<AudioContext | null>(null)
+  const gainNodeRef = useRef<GainNode | null>(null)
+  const sourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null)
+  const sourceConnectedRef = useRef(false)
 
   useEffect(() => {
     optionsRef.current = options
@@ -28,6 +36,44 @@ export function useAudio(
   useEffect(() => {
     selectedStationRef.current = selectedStation
   })
+
+  const ensureAudioContext = useCallback(() => {
+    if (!hasAudioContext) return
+    const audio = audioRef.current
+    if (!audio) return
+
+    if (!audioCtxRef.current) {
+      const Ctor = (globalThis.AudioContext ?? (globalThis as Record<string, unknown>).webkitAudioContext) as typeof AudioContext
+      audioCtxRef.current = new Ctor()
+      gainNodeRef.current = audioCtxRef.current.createGain()
+      gainNodeRef.current.gain.value = volumeRef.current
+      gainNodeRef.current.connect(audioCtxRef.current.destination)
+    }
+
+    if (audioCtxRef.current.state === 'suspended') {
+      audioCtxRef.current.resume().catch(() => {})
+    }
+
+    if (!sourceConnectedRef.current && gainNodeRef.current) {
+      try {
+        sourceNodeRef.current = audioCtxRef.current!.createMediaElementSource(audio)
+        sourceNodeRef.current.connect(gainNodeRef.current)
+        sourceConnectedRef.current = true
+      } catch {
+        // Already connected or CORS issue
+      }
+    }
+  }, [])
+
+  const setVolume = useCallback((v: number) => {
+    volumeRef.current = v
+    setVolumeState(v)
+    if (gainNodeRef.current) {
+      gainNodeRef.current.gain.value = v
+    }
+    const audio = audioRef.current
+    if (audio) audio.volume = v
+  }, [])
 
   const clearPlay3MinTimer = useCallback(() => {
     if (play3MinTimerRef.current !== null) {
@@ -44,6 +90,14 @@ export function useAudio(
 
   const onAudioPlaying = useCallback(() => {
     optionsRef.current.setIsAudioPlaying(true)
+    ensureAudioContext()
+    const audio = audioRef.current
+    if (audio && audio.volume !== volumeRef.current) {
+      audio.volume = volumeRef.current
+    }
+    if (gainNodeRef.current) {
+      gainNodeRef.current.gain.value = volumeRef.current
+    }
     const current = selectedStationRef.current
     if (!current) return
 
@@ -66,7 +120,7 @@ export function useAudio(
       }
       play3MinTimerRef.current = null
     }, 180000)
-  }, [clearPlay3MinTimer])
+  }, [clearPlay3MinTimer, ensureAudioContext])
 
   const onAudioPauseLike = useCallback(() => {
     optionsRef.current.setIsAudioPlaying(false)
@@ -99,7 +153,11 @@ export function useAudio(
     if (audio && station.url_resolved) {
       didManualPlayRef.current = true
       audio.pause()
-      audio.src = station.url_resolved
+      audio.src = `/api/audio-proxy?url=${encodeURIComponent(station.url_resolved)}`
+      audio.volume = volumeRef.current
+
+      ensureAudioContext()
+
       audio.load()
       const playPromise = audio.play()
       if (playPromise && typeof playPromise.catch === 'function') {
@@ -109,11 +167,6 @@ export function useAudio(
       }
     }
   }, [])
-
-  useEffect(() => {
-    const audio = audioRef.current
-    if (audio) audio.volume = volume
-  }, [volume])
 
   useEffect(() => {
     if (!('mediaSession' in navigator)) return
@@ -149,5 +202,6 @@ export function useAudio(
     onAudioError,
     playStation,
     didManualPlayRef,
+    ensureAudioContext,
   }
 }

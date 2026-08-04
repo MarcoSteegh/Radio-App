@@ -13,6 +13,7 @@ import { createObservabilityRoutes, createAdminObservabilityRoutes } from './rou
 import { createHealthRoute } from './routes/health.js'
 import { createAdminAuthRoutes } from './routes/adminAuth.js'
 import { createBulkUpsertRoute } from './routes/bulkUpsert.js'
+import { createAudioProxy } from './routes/audioProxy.js'
 
 const app = express()
 
@@ -142,6 +143,10 @@ app.post('/api/admin/login', enforceAdminLoginRateLimit, adminAuthRoutes.login)
 app.get('/api/admin/auth-status', adminAuthRoutes.authStatusUnprotected)
 app.post('/api/admin/refresh', authService.requireAdminAuth, adminAuthRoutes.refresh)
 app.post('/api/admin/logout', authService.requireAdminAuth, adminAuthRoutes.logout)
+
+// ─── Audio Proxy ─────────────────────────────────────────────────────────────
+const audioProxy = createAudioProxy()
+app.use('/api', audioProxy)
 
 // ─── Image Proxy ────────────────────────────────────────────────────────────
 app.get('/api/image-proxy', enforceImageProxyRateLimit, imageProxy.handleImageProxy)

@@ -20,6 +20,7 @@ self.addEventListener('fetch', (event) => {
   const { request } = event
   if (request.method !== 'GET') return
   if (request.url.includes('/api/')) return
+  if (request.mode === 'navigate') return
 
   event.respondWith(
     caches.match(request).then((cached) => {
@@ -31,7 +32,7 @@ self.addEventListener('fetch', (event) => {
           }
           return response
         })
-        .catch(() => cached)
+        .catch(() => cached ?? new Response('', { status: 504 }))
       return cached ?? fetched
     }),
   )

@@ -14,7 +14,7 @@ import { useRecentlyPlayed } from './hooks/useRecentlyPlayed'
 import { useSleepTimer } from './hooks/useSleepTimer'
 import { useStations } from './hooks/useStations'
 import { useToast } from './hooks/useToast'
-import { useI18n } from './lib/i18n'
+import { useI18n } from './lib/useI18n'
 import { distanceInKm, findFallbackStation, sanitizeStation } from './utils/stationUtils'
 import type { NearbyStation, Station } from './types/station'
 import './App.css'
@@ -68,7 +68,7 @@ function App() {
   const { favoritesById, favoriteIdSet, favoriteStations, toggleFavorite, importFavorites, updateFavoritesFromStations } = useFavorites()
   const { userLocation, isLocating, locationError, locateUser } = useGeolocation()
   const { bluetoothDeviceName, bluetoothError, isBluetoothConnecting, connectBluetoothDevice } = useBluetooth()
-  const { isCastAvailable, isCasting, castDeviceName, castError, isCastLoading, connectGoogleHome, castToStation, refreshCastSession } = useCast(selectedStation)
+  const { isCastAvailable, isCasting, castDeviceName, castError, isCastLoading, connectGoogleHome, castToStation, refreshCastSession, setCastVolume, castPause, castPlay } = useCast(selectedStation)
   const { offlineUntilById, clockTick, activeOfflineCount, offlineStations, markStationOffline, markStationHealthy, resetOfflineStations } = useOfflineStations(stations, favoritesById)
   const { sleepEndsAt, activateSleepTimer } = useSleepTimer(clockTick)
   const { recentlyPlayed, addToRecentlyPlayed } = useRecentlyPlayed()
@@ -156,16 +156,21 @@ function App() {
       setFallbackMessage(null)
       showToast(`${from.name} was offline, overstappen naar ${to.name}.`, 'info')
     },
-    [showToast, t],
+    [showToast],
   )
 
-  const { audioRef, volume, setVolume, playStation } = useAudio(selectedStation, {
+  const { audioRef, volume, setVolume: setLocalVolume, playStation, onAudioPlaying, onAudioPauseLike, onAudioError, ensureAudioContext } = useAudio(selectedStation, {
     onStationOffline,
     onFallbackExhausted,
     onFallbackTriggered,
     filteredStations,
     setIsAudioPlaying,
   })
+
+  const setVolume = useCallback((v: number) => {
+    setLocalVolume(v)
+    setCastVolume(v)
+  }, [setLocalVolume, setCastVolume])
 
   useEffect(() => { playStationRef.current = playStation }, [playStation])
 
@@ -418,7 +423,14 @@ function App() {
             onSelectStation={onSelectStation}
             onStationOffline={onStationOffline}
             onCanPlay={onAudioCanPlay}
+            onPlaying={onAudioPlaying}
+            onPause={onAudioPauseLike}
+            onError={onAudioError}
+            onEnsureAudioContext={ensureAudioContext}
             onSetIsAudioPlaying={setIsAudioPlaying}
+            isCasting={isCasting}
+            onCastPause={castPause}
+            onCastPlay={castPlay}
             onSleepTimer={handleSleepTimer}
             onDismissToast={dismissToast}
             onExportFavorites={exportFavorites}

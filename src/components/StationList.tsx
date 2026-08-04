@@ -1,7 +1,7 @@
 import { useRef } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import OfflineCountdown from './OfflineCountdown'
-import { useI18n } from '../lib/i18n'
+import { useI18n } from '../lib/useI18n'
 import type { NearbyStation, Station } from '../types/station'
 
 type OfflineEntry = { station: Station; msRemaining: number; offlineUntil: number }

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useMemo } from 'react'
+import { createContext, useState, useCallback, useMemo } from 'react'
 import type { ReactNode } from 'react'
 
 export type Locale = 'nl' | 'en' | 'de' | 'fr'
@@ -272,7 +272,7 @@ type I18nContextValue = {
   t: (key: string, vars?: Record<string, string>) => string
 }
 
-const I18nContext = createContext<I18nContextValue>({
+export const I18nContext = createContext<I18nContextValue>({
   locale: 'nl',
   setLocale: () => {},
   t: (key) => key,
@@ -312,8 +312,4 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const value = useMemo(() => ({ locale, setLocale: handleSetLocale, t }), [locale, handleSetLocale, t])
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>
-}
-
-export function useI18n() {
-  return useContext(I18nContext)
 }

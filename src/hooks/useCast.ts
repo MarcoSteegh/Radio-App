@@ -6,7 +6,7 @@ type CastSessionLike = {
   getCastDevice?: () => { friendlyName?: string }
   loadMedia?: (request: unknown) => Promise<unknown>
   setVolume?: (volume: number) => Promise<unknown> | void
-  getMediaSession?: () => { setVolume?: (volume: number) => Promise<unknown> | void } | null
+  getMediaSession?: () => { setVolume?: (volume: number) => Promise<unknown> | void; pause?: () => void; play?: () => void } | null
 }
 
 type CastContextLike = {
@@ -412,6 +412,41 @@ export function useCast(selectedStation: Station | null) {
     }
   }, [])
 
+  const setCastVolume = useCallback((level: number) => {
+    const castWindow = window as Window & ChromeCastLike
+    const framework = castWindow.cast?.framework
+    const session = framework?.CastContext.getInstance().getCurrentSession()
+    if (!session) return
+    const clamped = Math.max(0, Math.min(1, level))
+    try {
+      if (typeof session.setVolume === 'function') {
+        session.setVolume(clamped)
+      }
+    } catch (err) {
+      console.error('[cast] setVolume failed:', err)
+    }
+  }, [])
+
+  const castPause = useCallback(() => {
+    const castWindow = window as Window & ChromeCastLike
+    const framework = castWindow.cast?.framework
+    const session = framework?.CastContext.getInstance().getCurrentSession()
+    const mediaSession = session?.getMediaSession?.()
+    if (mediaSession && typeof mediaSession.pause === 'function') {
+      mediaSession.pause()
+    }
+  }, [])
+
+  const castPlay = useCallback(() => {
+    const castWindow = window as Window & ChromeCastLike
+    const framework = castWindow.cast?.framework
+    const session = framework?.CastContext.getInstance().getCurrentSession()
+    const mediaSession = session?.getMediaSession?.()
+    if (mediaSession && typeof mediaSession.play === 'function') {
+      mediaSession.play()
+    }
+  }, [])
+
   return {
     isCastAvailable,
     isCasting,
@@ -424,5 +459,8 @@ export function useCast(selectedStation: Station | null) {
     connectGoogleHome,
     castToStation,
     refreshCastSession,
+    setCastVolume,
+    castPause,
+    castPlay,
   }
 }

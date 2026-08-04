@@ -4,7 +4,7 @@ const OBSERVABILITY_ENABLED =
   String(import.meta.env.VITE_OBSERVABILITY_ENABLED ?? OBSERVABILITY_DEFAULT_ENABLED).toLowerCase() === 'true'
 const SESSION_KEY = 'world-radio-explorer-observability-session-id'
 let observabilityTransportBlocked = false
-let pendingEvents: unknown[] = []
+const pendingEvents: unknown[] = []
 let flushTimer: ReturnType<typeof setTimeout> | null = null
 
 const FLUSH_INTERVAL_MS = 5000

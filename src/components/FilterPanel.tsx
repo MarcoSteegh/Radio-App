@@ -1,5 +1,5 @@
 import type { FormEvent } from 'react'
-import { useI18n } from '../lib/i18n'
+import { useI18n } from '../lib/useI18n'
 import type { Locale } from '../lib/i18n'
 
 type FilterPanelProps = {

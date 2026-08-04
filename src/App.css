@@ -1,5 +1,42 @@
 .hidden-audio {
-  display: none;
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.player-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.play-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: linear-gradient(130deg, #ffb703, #fb8500);
+  color: #222;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+  flex: 0 0 auto;
+}
+
+.play-btn:hover {
+  transform: scale(1.08);
+  box-shadow: 0 2px 12px rgba(255, 183, 3, 0.35);
+}
+
+.play-btn:focus-visible {
+  outline: 2px solid #ffb703;
+  outline-offset: 2px;
 }
 
 .skip-link {
@@ -1006,6 +1043,13 @@ h1 {
 .volume-slider {
   width: 100%;
   min-width: 110px;
+}
+
+.volume-value {
+  font-size: 0.78rem;
+  color: #9eb7bd;
+  min-width: 2.5rem;
+  text-align: right;
 }
 
 .fav-toggle {

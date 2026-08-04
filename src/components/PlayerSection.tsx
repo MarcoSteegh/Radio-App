@@ -1,6 +1,6 @@
 import type { ChangeEvent, RefObject } from 'react'
 import type { Station, Toast } from '../types/station'
-import { useI18n } from '../lib/i18n'
+import { useI18n } from '../lib/useI18n'
 
 type PlayerSectionProps = {
   selectedStation: Station | null
@@ -20,7 +20,14 @@ type PlayerSectionProps = {
   onSelectStation: (station: Station) => void
   onStationOffline: (station: Station) => boolean
   onCanPlay: () => void
+  onPlaying: () => void
+  onPause: () => void
+  onError: () => void
+  onEnsureAudioContext: () => void
   onSetIsAudioPlaying: (playing: boolean) => void
+  isCasting: boolean
+  onCastPause: () => void
+  onCastPlay: () => void
   onSleepTimer: (minutes: number) => void
   onDismissToast: () => void
   onExportFavorites: () => void
@@ -46,7 +53,14 @@ export default function PlayerSection({
   onSelectStation,
   onStationOffline,
   onCanPlay,
+  onPlaying,
+  onPause,
+  onError,
+  onEnsureAudioContext,
   onSetIsAudioPlaying,
+  isCasting,
+  onCastPause,
+  onCastPlay,
   onSleepTimer,
   onDismissToast,
   onExportFavorites,
@@ -54,6 +68,20 @@ export default function PlayerSection({
   onImportFavorites,
 }: PlayerSectionProps) {
   const { t } = useI18n()
+
+  const togglePlayback = () => {
+    const audio = audioRef.current
+    if (!audio) return
+    if (isAudioPlaying) {
+      audio.pause()
+      onCastPause()
+    } else {
+      onEnsureAudioContext()
+      audio.play().catch(() => {})
+      onCastPlay()
+    }
+  }
+
   return (
     <>
       {error && <p className="error">{error}</p>}
@@ -112,32 +140,45 @@ export default function PlayerSection({
 
           <audio
             ref={audioRef}
-            key={selectedStation.stationuuid}
-            controls
             autoPlay
             preload="none"
-            src={selectedStation.url_resolved}
             aria-label={selectedStation.name}
-            onError={() => onStationOffline(selectedStation)}
+            onError={onError}
             onCanPlay={onCanPlay}
+            onPlaying={onPlaying}
             onPlay={() => onSetIsAudioPlaying(true)}
-            onPause={() => onSetIsAudioPlaying(false)}
+            onPause={onPause}
+            className="hidden-audio"
           >
             Je browser ondersteunt geen audio streaming.
           </audio>
 
-          <div className="volume-row">
-            <span className="volume-label" aria-hidden="true">🔊</span>
-            <input
-              type="range"
-              className="volume-slider"
-              min={0}
-              max={1}
-              step={0.01}
-              value={volume}
-              onChange={(e) => onVolumeChange(Number(e.target.value))}
-              aria-label="Volume"
-            />
+          <div className="player-controls">
+            <button
+              type="button"
+              className="play-btn"
+              onClick={togglePlayback}
+              aria-label={isAudioPlaying ? 'Pauzeer' : 'Speel af'}
+            >
+              {isAudioPlaying ? '⏸' : '▶'}
+            </button>
+
+            <div className="volume-row">
+              <span className="volume-label" aria-hidden="true">
+                {volume === 0 ? '🔇' : volume < 0.5 ? '🔉' : '🔊'}
+              </span>
+              <input
+                type="range"
+                className="volume-slider"
+                min={0}
+                max={1}
+                step={0.01}
+                value={volume}
+                onChange={(e) => onVolumeChange(Number(e.target.value))}
+                aria-label="Volume"
+              />
+              <span className="volume-value">{Math.round(volume * 100)}%</span>
+            </div>
           </div>
 
           {isAudioPlaying && (
