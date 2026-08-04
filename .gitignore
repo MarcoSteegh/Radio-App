@@ -17,6 +17,7 @@ test-output.txt
 vitest-results.json
 .env
 .env.*
+!.env.example
 
 # Editor directories and files
 .vscode/*

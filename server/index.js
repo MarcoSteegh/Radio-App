@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import * as Sentry from '@sentry/node'
 import express from 'express'
 import { pool } from './db.js'
 import { createCorsMiddleware } from './middleware/cors.js'
@@ -14,6 +15,15 @@ import { createHealthRoute } from './routes/health.js'
 import { createAdminAuthRoutes } from './routes/adminAuth.js'
 import { createBulkUpsertRoute } from './routes/bulkUpsert.js'
 import { createAudioProxy } from './routes/audioProxy.js'
+
+const SENTRY_DSN = process.env.SENTRY_DSN
+if (SENTRY_DSN) {
+  Sentry.init({
+    dsn: SENTRY_DSN,
+    environment: process.env.NODE_ENV ?? 'development',
+    tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.2 : 1.0,
+  })
+}
 
 const app = express()
 
@@ -58,6 +68,7 @@ const allowedCorsOrigins = new Set(
 app.use(createCorsMiddleware(allowedCorsOrigins))
 app.use(express.json({ limit: '2mb' }))
 app.use(createSLAMiddleware())
+app.use(Sentry.requestHandler())
 
 // ─── Shared State ───────────────────────────────────────────────────────────
 const submissionRateState = new Map()
@@ -196,6 +207,9 @@ app.get('/api/admin/observability/summary', authService.requireAdminAuth, async 
 
 // ─── Bulk Upsert ────────────────────────────────────────────────────────────
 app.post('/api/admin/stations/bulk-upsert', requireServiceKey, bulkUpsertRoute.bulkUpsert)
+
+// ─── Sentry Error Handler ───────────────────────────────────────────────────
+app.use(Sentry.errorHandler())
 
 // ─── Initialize & Start ─────────────────────────────────────────────────────
 async function initializeObservabilityTables() {
