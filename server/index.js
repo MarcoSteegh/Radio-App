@@ -15,6 +15,7 @@ import { createHealthRoute } from './routes/health.js'
 import { createAdminAuthRoutes } from './routes/adminAuth.js'
 import { createBulkUpsertRoute } from './routes/bulkUpsert.js'
 import { createAudioProxy } from './routes/audioProxy.js'
+import { createSecurityHeadersMiddleware } from './middleware/securityHeaders.js'
 
 const SENTRY_DSN = process.env.SENTRY_DSN
 if (SENTRY_DSN) {
@@ -66,6 +67,7 @@ const allowedCorsOrigins = new Set(
 )
 
 app.use(createCorsMiddleware(allowedCorsOrigins))
+app.use(createSecurityHeadersMiddleware())
 app.use(express.json({ limit: '2mb' }))
 app.use(createSLAMiddleware())
 app.use(Sentry.requestHandler())
