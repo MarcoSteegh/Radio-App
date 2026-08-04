@@ -337,8 +337,8 @@ function App() {
   }, [])
 
   useEffect(() => {
+    const audio = audioRef.current
     return () => {
-      const audio = audioRef.current
       if (audio) { audio.pause(); audio.removeAttribute('src'); audio.load() }
     }
   }, [audioRef])

@@ -40,6 +40,7 @@ export default function StationList({
   "use no memo"
   const { t } = useI18n()
   const virtualScrollRef = useRef<HTMLDivElement | null>(null)
+  // eslint-disable-next-line react-hooks/incompatible-library
   const virtualizer = useVirtualizer({
     count: filteredStations.length,
     getScrollElement: () => virtualScrollRef.current,

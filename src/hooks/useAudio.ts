@@ -166,7 +166,7 @@ export function useAudio(
         })
       }
     }
-  }, [])
+  }, [ensureAudioContext])
 
   useEffect(() => {
     if (!('mediaSession' in navigator)) return

@@ -11,7 +11,10 @@ function OfflineCountdown({ offlineUntil, onExpire }: OfflineCountdownProps) {
     Math.max(0, offlineUntil - Date.now()),
   )
   const onExpireRef = useRef(onExpire)
-  onExpireRef.current = onExpire
+
+  useEffect(() => {
+    onExpireRef.current = onExpire
+  }, [onExpire])
 
   useEffect(() => {
     if (offlineUntil <= Date.now()) {

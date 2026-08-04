@@ -150,7 +150,7 @@ export function useStations() {
         setIsLoading(false)
       }
     }
-  }, [])
+  }, [stations.length])
 
   useEffect(() => {
     return () => {
