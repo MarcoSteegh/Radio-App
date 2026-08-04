@@ -1,5 +1,6 @@
-import { createContext, useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import type { ReactNode } from 'react'
+import { I18nContext } from './i18n-context'
 
 export type Locale = 'nl' | 'en' | 'de' | 'fr'
 
@@ -265,18 +266,6 @@ const translations: Record<Locale, Record<string, string>> = {
     'skipToContent': 'Aller à la liste des stations',
   },
 }
-
-type I18nContextValue = {
-  locale: Locale
-  setLocale: (l: Locale) => void
-  t: (key: string, vars?: Record<string, string>) => string
-}
-
-export const I18nContext = createContext<I18nContextValue>({
-  locale: 'nl',
-  setLocale: () => {},
-  t: (key) => key,
-})
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [locale, setLocale] = useState<Locale>(() => {

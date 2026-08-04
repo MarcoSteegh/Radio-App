@@ -421,14 +421,12 @@ function App() {
             importInputRef={importInputRef}
             onToggleFavorite={toggleFavorite}
             onSelectStation={onSelectStation}
-            onStationOffline={onStationOffline}
             onCanPlay={onAudioCanPlay}
             onPlaying={onAudioPlaying}
             onPause={onAudioPauseLike}
             onError={onAudioError}
             onEnsureAudioContext={ensureAudioContext}
             onSetIsAudioPlaying={setIsAudioPlaying}
-            isCasting={isCasting}
             onCastPause={castPause}
             onCastPlay={castPlay}
             onSleepTimer={handleSleepTimer}

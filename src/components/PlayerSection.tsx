@@ -18,14 +18,12 @@ type PlayerSectionProps = {
   importInputRef: RefObject<HTMLInputElement | null>
   onToggleFavorite: (station: Station) => void
   onSelectStation: (station: Station) => void
-  onStationOffline: (station: Station) => boolean
   onCanPlay: () => void
   onPlaying: () => void
   onPause: () => void
   onError: () => void
   onEnsureAudioContext: () => void
   onSetIsAudioPlaying: (playing: boolean) => void
-  isCasting: boolean
   onCastPause: () => void
   onCastPlay: () => void
   onSleepTimer: (minutes: number) => void
@@ -51,14 +49,12 @@ export default function PlayerSection({
   importInputRef,
   onToggleFavorite,
   onSelectStation,
-  onStationOffline,
   onCanPlay,
   onPlaying,
   onPause,
   onError,
   onEnsureAudioContext,
   onSetIsAudioPlaying,
-  isCasting,
   onCastPause,
   onCastPlay,
   onSleepTimer,
