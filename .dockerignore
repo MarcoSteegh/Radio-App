@@ -1,0 +1,12 @@
+node_modules
+dist
+.git
+.github
+.vscode
+e2e
+test-results
+test-output.txt
+vitest-results.json
+*.md
+.env
+.env.*
