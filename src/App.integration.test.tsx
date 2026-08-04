@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ReactNode } from 'react'
+import { I18nProvider } from './lib/i18n'
 import App from './App'
 
 vi.mock('@tanstack/react-virtual', () => ({
@@ -130,6 +131,7 @@ function getStationButton(name: string): HTMLButtonElement {
 describe('App integration', () => {
   beforeEach(() => {
     localStorage.clear()
+    localStorage.setItem('radio-locale', 'nl')
     mockLeafletMap.addLayer.mockClear()
     mockLeafletMap.removeLayer.mockClear()
     mockLeafletMap.flyTo.mockClear()
@@ -154,7 +156,7 @@ describe('App integration', () => {
       JSON.stringify({ country: 'Belgium', language: 'french', tag: 'pop' }),
     )
 
-    render(<App />)
+    render(<I18nProvider><App /></I18nProvider>)
 
     const searchInput = screen.getByLabelText('Zoek station, genre of stad') as HTMLInputElement
     const countrySelect = screen.getByLabelText('Land') as HTMLSelectElement
@@ -170,7 +172,7 @@ describe('App integration', () => {
   })
 
   it('toggles between dark and light mode', async () => {
-    render(<App />)
+    render(<I18nProvider><App /></I18nProvider>)
 
     const toggleButton = screen.getByRole('button', { name: /licht|donker/i })
     expect(toggleButton).toBeInTheDocument()
@@ -190,7 +192,7 @@ describe('App integration', () => {
   })
 
   it('resets country, language and tag filters to all', async () => {
-    render(<App />)
+    render(<I18nProvider><App /></I18nProvider>)
 
     const countrySelect = screen.getByLabelText('Land') as HTMLSelectElement
     const languageSelect = screen.getByLabelText('Taal') as HTMLSelectElement
@@ -229,7 +231,7 @@ describe('App integration', () => {
       .spyOn(HTMLAnchorElement.prototype, 'click')
       .mockImplementation(() => {})
 
-    const { container } = render(<App />)
+    const { container } = render(<I18nProvider><App /></I18nProvider>)
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Import' })).toBeInTheDocument()
@@ -293,7 +295,7 @@ describe('App integration', () => {
   })
 
   it('shows recovery feedback when a station becomes healthy again after an error', async () => {
-    render(<App />)
+    render(<I18nProvider><App /></I18nProvider>)
 
     await waitFor(() => {
       expect(document.querySelector('audio')).not.toBeNull()
@@ -320,7 +322,7 @@ describe('App integration', () => {
   })
 
   it('marks station offline on audio error and restores it manually', async () => {
-    render(<App />)
+    render(<I18nProvider><App /></I18nProvider>)
 
     await waitFor(() => {
       expect(document.querySelector('audio')).not.toBeNull()
@@ -350,7 +352,7 @@ describe('App integration', () => {
   })
 
   it('automatically switches to an alternative station on stream error (fallback)', async () => {
-    render(<App />)
+    render(<I18nProvider><App /></I18nProvider>)
 
     await waitFor(() => {
       expect(document.querySelector('audio')).not.toBeNull()
@@ -390,7 +392,7 @@ describe('App integration', () => {
       }),
     )
 
-    render(<App />)
+    render(<I18nProvider><App /></I18nProvider>)
 
     await waitFor(() => {
       expect(document.querySelector('audio')).not.toBeNull()
@@ -407,7 +409,7 @@ describe('App integration', () => {
   })
 
   it('recenters the map when selecting a station with coordinates', async () => {
-    render(<App />)
+    render(<I18nProvider><App /></I18nProvider>)
 
     await waitFor(() => {
       expect(mockLeafletMap.flyTo).toHaveBeenCalled()
@@ -434,7 +436,7 @@ describe('App integration', () => {
   })
 
   it('shows a toast and keeps the map in place when the selected station has no coordinates', async () => {
-    render(<App />)
+    render(<I18nProvider><App /></I18nProvider>)
 
     await waitFor(() => {
       expect(mockLeafletMap.flyTo).toHaveBeenCalled()

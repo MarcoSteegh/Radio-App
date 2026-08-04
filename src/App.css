@@ -1,6 +1,39 @@
 .hidden-audio {
   display: none;
 }
+
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 0;
+  z-index: 9999;
+  padding: 0.75rem 1.25rem;
+  background: #ffb703;
+  color: #001219;
+  font-weight: 700;
+  text-decoration: none;
+  border-radius: 0 0 8px 0;
+  transition: top 0.2s;
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
+.error-boundary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: 1rem;
+  text-align: center;
+  padding: 2rem;
+}
+
+.error-boundary h2 {
+  color: #ffadad;
+}
 .app-shell {
   display: flex;
   flex-direction: column;
@@ -1261,6 +1294,23 @@ audio {
   transform: translateY(-1px);
 }
 
+.locale-select {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  padding: 0.45rem 0.5rem;
+  background: rgba(255, 255, 255, 0.08);
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.app-shell[data-theme='light'] .locale-select {
+  background: rgba(20, 33, 43, 0.06);
+  border-color: rgba(20, 33, 43, 0.12);
+}
+
 @media (max-width: 950px) {
   .app-shell {
     padding: 0.9rem;
@@ -1352,4 +1402,186 @@ audio {
 
 .cluster-lg {
   font-size: 12px;
+}
+
+/* ── Mobile-first breakpoints ────────────────────────────── */
+
+@media (max-width: 600px) {
+  .app-shell {
+    padding: 0.5rem;
+    gap: 0.6rem;
+  }
+
+  .brand-panel {
+    padding: 0.7rem 0.8rem;
+  }
+
+  h1 {
+    font-size: clamp(1.5rem, 6vw, 2.2rem);
+  }
+
+  .subtitle {
+    font-size: 0.88rem;
+  }
+
+  .search {
+    padding: 0.6rem;
+  }
+
+  .search input {
+    padding: 0.6rem 0.7rem;
+    font-size: 16px;
+  }
+
+  .search button {
+    padding: 0.6rem 0.8rem;
+    font-size: 0.88rem;
+  }
+
+  .toolbar-row {
+    flex-direction: column;
+  }
+
+  .toolbar-group {
+    width: 100%;
+  }
+
+  .toolbar-group .secondary-btn {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .filter-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .map {
+    height: 45vh;
+    min-height: 250px;
+  }
+
+  .panel {
+    padding: 0.65rem;
+    gap: 0.5rem;
+  }
+
+  .station {
+    padding: 0.5rem;
+  }
+
+  .virtual-list-scroll {
+    height: 400px;
+  }
+
+  .now-playing {
+    padding: 0.55rem;
+  }
+
+  .now-playing h2 {
+    font-size: 1.2rem;
+  }
+
+  .audio {
+    border-radius: 8px;
+  }
+
+  .locale-select {
+    padding: 0.35rem 0.4rem;
+    font-size: 0.72rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .brand-top-row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .toolbar-group {
+    flex-wrap: wrap;
+  }
+
+  .toolbar-group .secondary-btn {
+    font-size: 0.8rem;
+    padding: 0.5rem 0.6rem;
+  }
+}
+
+/* ── Touch optimizations ────────────────────────────── */
+
+@media (hover: none) and (pointer: coarse) {
+  .station,
+  .mini-action,
+  .secondary-btn,
+  .fav-toggle,
+  .theme-toggle,
+  .locale-select {
+    min-height: 44px;
+  }
+
+  .station {
+    padding: 0.65rem;
+  }
+
+  .mini-action {
+    padding: 0.55rem 0.5rem;
+  }
+
+  .search input {
+    padding: 0.75rem 0.8rem;
+  }
+
+  .search button {
+    padding: 0.75rem 1rem;
+  }
+
+  .filter-grid select {
+    padding: 0.6rem;
+    min-height: 44px;
+  }
+
+  .volume-slider {
+    height: 32px;
+  }
+
+  .skip-link {
+    padding: 1rem 1.5rem;
+  }
+}
+
+/* ── Reduced motion ────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .station,
+  .mini-action,
+  .secondary-btn,
+  .fav-toggle,
+  .search button {
+    transition: none;
+  }
+
+  .station:hover,
+  .mini-action:hover {
+    transform: none;
+  }
+}
+
+/* ── High contrast ────────────────────────────── */
+
+@media (prefers-contrast: high) {
+  .station,
+  .mini-action,
+  .secondary-btn,
+  .fav-toggle {
+    border-width: 2px;
+  }
+
+  .station.active {
+    border-color: #ffb703;
+  }
+
+  .skip-link:focus {
+    outline: 3px solid #ffb703;
+    outline-offset: 2px;
+  }
 }

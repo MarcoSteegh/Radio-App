@@ -1,10 +1,13 @@
 import type { ChangeEvent, RefObject } from 'react'
 import type { Station, Toast } from '../types/station'
+import { useI18n } from '../lib/i18n'
 
 type PlayerSectionProps = {
   selectedStation: Station | null
   audioRef: RefObject<HTMLAudioElement | null>
   isAudioPlaying: boolean
+  volume: number
+  onVolumeChange: (v: number) => void
   sleepEndsAt: number | null
   favoriteIdSet: Set<string>
   filteredRecentlyPlayed: Station[]
@@ -29,6 +32,8 @@ export default function PlayerSection({
   selectedStation,
   audioRef,
   isAudioPlaying,
+  volume,
+  onVolumeChange,
   sleepEndsAt,
   favoriteIdSet,
   filteredRecentlyPlayed,
@@ -48,6 +53,7 @@ export default function PlayerSection({
   onTriggerImport,
   onImportFavorites,
 }: PlayerSectionProps) {
+  const { t } = useI18n()
   return (
     <>
       {error && <p className="error">{error}</p>}
@@ -71,10 +77,10 @@ export default function PlayerSection({
 
       <div className="favorites-tools">
         <button type="button" className="mini-action" onClick={onExportFavorites}>
-          Export
+          {t('player.export')}
         </button>
         <button type="button" className="mini-action" onClick={onTriggerImport}>
-          Import
+          {t('player.import')}
         </button>
         <input
           ref={importInputRef}
@@ -88,18 +94,18 @@ export default function PlayerSection({
       {!error && selectedStation ? (
         <>
           <div className="now-playing">
-            <p className="eyebrow">Now playing</p>
+            <p className="eyebrow">{t('player.nowPlaying')}</p>
             <h2>{selectedStation.name}</h2>
             <p>
               {selectedStation.country}
               {selectedStation.state ? `, ${selectedStation.state}` : ''}
             </p>
             <p className="meta">
-              {selectedStation.language || 'Onbekende taal'} · {selectedStation.tags || 'Algemeen'}
+              {selectedStation.language || t('player.unknownLanguage')} · {selectedStation.tags || t('player.unknownTags')}
             </p>
             <div className="station-actions-row">
               <button type="button" className="fav-toggle" onClick={() => onToggleFavorite(selectedStation)}>
-                {favoriteIdSet.has(selectedStation.stationuuid) ? 'Verwijder favoriet' : 'Voeg toe aan favorieten'}
+                {favoriteIdSet.has(selectedStation.stationuuid) ? t('player.favoriteRemove') : t('player.favoriteAdd')}
               </button>
             </div>
           </div>
@@ -120,10 +126,24 @@ export default function PlayerSection({
             Je browser ondersteunt geen audio streaming.
           </audio>
 
+          <div className="volume-row">
+            <span className="volume-label" aria-hidden="true">🔊</span>
+            <input
+              type="range"
+              className="volume-slider"
+              min={0}
+              max={1}
+              step={0.01}
+              value={volume}
+              onChange={(e) => onVolumeChange(Number(e.target.value))}
+              aria-label="Volume"
+            />
+          </div>
+
           {isAudioPlaying && (
             <div className="sleep-timer-row">
               <div className="sleep-presets">
-                <span className="sleep-label">Sleep timer:</span>
+                <span className="sleep-label">{t('player.sleepTimer')}</span>
                 {[15, 30, 45, 60].map((minutes) => (
                   <button key={minutes} type="button" className="mini-action" onClick={() => onSleepTimer(minutes)}>
                     {minutes}m
@@ -137,7 +157,7 @@ export default function PlayerSection({
               </div>
               {sleepEndsAt && (
                 <p className="sleep-label">
-                  Slaap timer actief tot {new Date(sleepEndsAt).toLocaleTimeString()}
+                  {t('player.sleepActive')} {new Date(sleepEndsAt).toLocaleTimeString()}
                 </p>
               )}
             </div>

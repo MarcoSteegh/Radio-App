@@ -14,6 +14,7 @@ import { useRecentlyPlayed } from './hooks/useRecentlyPlayed'
 import { useSleepTimer } from './hooks/useSleepTimer'
 import { useStations } from './hooks/useStations'
 import { useToast } from './hooks/useToast'
+import { useI18n } from './lib/i18n'
 import { distanceInKm, findFallbackStation, sanitizeStation } from './utils/stationUtils'
 import type { NearbyStation, Station } from './types/station'
 import './App.css'
@@ -36,6 +37,7 @@ function readStoredFilters() {
 }
 
 function App() {
+  const { locale, setLocale, t } = useI18n()
   const [query, setQuery] = useState(() => {
     if (typeof window === 'undefined') return INITIAL_SEARCH
     return window.localStorage.getItem('radio-search') ?? INITIAL_SEARCH
@@ -49,7 +51,8 @@ function App() {
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     if (typeof window === 'undefined') return 'dark'
     const stored = window.localStorage.getItem('radio-theme')
-    return stored === 'light' ? 'light' : 'dark'
+    if (stored === 'light' || stored === 'dark') return stored
+    return window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
   })
   const [recoveryMessage, setRecoveryMessage] = useState<string | null>(null)
   const [fallbackMessage, setFallbackMessage] = useState<string | null>(null)
@@ -121,20 +124,20 @@ function App() {
   // -- Callbacks ------------------------------------------------------------
 
   const onFallbackExhausted = useCallback(() => {
-    setFallbackMessage('Geen alternatief station beschikbaar.')
-  }, [])
+    setFallbackMessage(t('error.noFallback'))
+  }, [t])
 
   const onStationOffline = useCallback(
     (station: Station) => {
       const shouldToast = markStationOffline(station)
       lastFailedStationRef.current = { uuid: station.stationuuid, name: station.name }
       setRecoveryMessage(null)
-      if (shouldToast) showToast(`${station.name} lijkt offline en wordt tijdelijk verborgen.`, 'error')
+      if (shouldToast) showToast(`${station.name} ${t('error.offline')}`, 'error')
 
       const fallback = findFallbackStation(station, filteredStations)
       if (fallback) {
         setFallbackMessage(null)
-        showToast(`Schakel over naar alternatief: ${fallback.name}`, 'info')
+        showToast(`${t('error.fallback')} ${fallback.name}`, 'info')
         setSelectedStation(fallback)
         setSelectedFlyKey((k) => k + 1)
         addToRecentlyPlayed(fallback)
@@ -145,7 +148,7 @@ function App() {
       }
       return shouldToast
     },
-    [addToRecentlyPlayed, castDeviceName, castToStation, filteredStations, isCastAvailable, markStationOffline, onFallbackExhausted, showToast],
+    [addToRecentlyPlayed, castDeviceName, castToStation, filteredStations, isCastAvailable, markStationOffline, onFallbackExhausted, showToast, t],
   )
 
   const onFallbackTriggered = useCallback(
@@ -153,10 +156,10 @@ function App() {
       setFallbackMessage(null)
       showToast(`${from.name} was offline, overstappen naar ${to.name}.`, 'info')
     },
-    [showToast],
+    [showToast, t],
   )
 
-  const { audioRef, playStation } = useAudio(selectedStation, {
+  const { audioRef, volume, setVolume, playStation } = useAudio(selectedStation, {
     onStationOffline,
     onFallbackExhausted,
     onFallbackTriggered,
@@ -171,12 +174,12 @@ function App() {
     markStationHealthy(selectedStation)
     const failed = lastFailedStationRef.current
     if (failed) {
-      const msg = `Stream werkt weer voor ${failed.name}.`
+      const msg = `${t('error.recovery')} ${failed.name}.`
       setRecoveryMessage(msg)
       showToast(msg, 'success')
       lastFailedStationRef.current = null
     }
-  }, [markStationHealthy, selectedStation, showToast])
+  }, [markStationHealthy, selectedStation, showToast, t])
 
   const onSelectStation = useCallback(
     (station: Station) => {
@@ -188,13 +191,13 @@ function App() {
         setSelectedFlyKey((k) => k + 1)
       } else if (isDifferentStation) {
         setFallbackMessage(null)
-        showToast(`Kan ${station.name} niet op de kaart centreren: locatie ontbreekt.`, 'info')
+        showToast(t('error.noLocation', { name: station.name }), 'info')
       }
 
       const wasFailed = lastFailedStationRef.current?.uuid === station.stationuuid
       lastFailedStationRef.current = null
       if (wasFailed) {
-        const msg = `Stream werkt weer voor ${station.name}.`
+        const msg = `${t('error.recovery')} ${station.name}.`
         setRecoveryMessage(msg)
         showToast(msg, 'success')
       } else {
@@ -205,7 +208,7 @@ function App() {
       playStation(station)
       if (isCastAvailable && castDeviceName) void castToStation(station)
     },
-    [addToRecentlyPlayed, castDeviceName, castToStation, isCastAvailable, playStation, selectedStation, showToast],
+    [addToRecentlyPlayed, castDeviceName, castToStation, isCastAvailable, playStation, selectedStation, showToast, t],
   )
 
   const onSearch = useCallback(
@@ -244,7 +247,7 @@ function App() {
       markStationHealthy(station)
       const wasFailed = lastFailedStationRef.current?.uuid === station.stationuuid
       if (wasFailed) {
-        const msg = `Stream werkt weer voor ${station.name}.`
+        const msg = `${t('error.recovery')} ${station.name}.`
         setRecoveryMessage(msg)
         showToast(msg, 'success')
         lastFailedStationRef.current = null
@@ -254,12 +257,12 @@ function App() {
       playStation(station)
       if (isCastAvailable && castDeviceName) void castToStation(station)
     },
-    [castDeviceName, castToStation, favoritesById, isCastAvailable, markStationHealthy, playStation, showToast, stations],
+    [castDeviceName, castToStation, favoritesById, isCastAvailable, markStationHealthy, playStation, showToast, stations, t],
   )
 
   const exportFavorites = useCallback(() => {
     const items = Object.values(favoritesById)
-    if (items.length === 0) { showToast('Er zijn nog geen favorieten om te exporteren.', 'info'); return }
+    if (items.length === 0) { showToast(t('player.noFavorites'), 'info'); return }
     const blob = new Blob([JSON.stringify(items, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const anchor = document.createElement('a')
@@ -267,8 +270,8 @@ function App() {
     anchor.download = 'radio-favorieten.json'
     anchor.click()
     URL.revokeObjectURL(url)
-    showToast(`${items.length} favorieten geëxporteerd.`, 'success')
-  }, [favoritesById, showToast])
+    showToast(t('player.exportSuccess', { count: String(items.length) }), 'success')
+  }, [favoritesById, showToast, t])
 
   const triggerImport = useCallback(() => { importInputRef.current?.click() }, [])
 
@@ -279,15 +282,15 @@ function App() {
       if (!file) return
       try {
         const parsed = JSON.parse(await file.text()) as unknown
-        if (!Array.isArray(parsed)) throw new Error('Ongeldig JSON formaat')
+        if (!Array.isArray(parsed)) throw new Error(t('player.importFormatError'))
         const imported = parsed.map((item) => sanitizeStation(item)).filter((s): s is Station => Boolean(s))
         importFavorites(imported)
-    showToast(`${imported.length} favorieten geïmporteerd.`, 'success')
+    showToast(t('player.importSuccess', { count: String(imported.length) }), 'success')
       } catch {
-        showToast('Import mislukt. Gebruik een geldig favorieten JSON-bestand.', 'error')
+        showToast(t('player.importError'), 'error')
       }
     },
-    [importFavorites, showToast],
+    [importFavorites, showToast, t],
   )
 
   const handleSleepTimer = useCallback(
@@ -339,7 +342,11 @@ function App() {
 
   return (
     <main className="app-shell" data-theme={theme}>
-      <header className="app-header">
+      <a href="#station-list" className="skip-link">
+        Ga naar stationlijst
+      </a>
+
+      <header className="app-header" role="banner">
         <FilterPanel
           query={query}
           isLoading={isLoading}
@@ -377,10 +384,12 @@ function App() {
           onToggleAdmin={() => setShowAdmin((v) => !v)}
           onToggleTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
           onFilterChange={(patch) => setFilters((f) => ({ ...f, ...patch }))}
+          locale={locale}
+          onLocaleChange={setLocale}
         />
       </header>
 
-      <section className="content-grid">
+      <section className="content-grid" role="main" aria-label="Kaart en stations">
         <div className="map-wrap">
           <MapSection
             mapStations={mapStations}
@@ -395,6 +404,8 @@ function App() {
             selectedStation={selectedStation}
             audioRef={audioRef}
             isAudioPlaying={isAudioPlaying}
+            volume={volume}
+            onVolumeChange={setVolume}
             sleepEndsAt={sleepEndsAt}
             favoriteIdSet={favoriteIdSet}
             filteredRecentlyPlayed={filteredRecentlyPlayed}

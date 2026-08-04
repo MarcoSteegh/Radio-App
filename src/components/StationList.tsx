@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import OfflineCountdown from './OfflineCountdown'
+import { useI18n } from '../lib/i18n'
 import type { NearbyStation, Station } from '../types/station'
 
 type OfflineEntry = { station: Station; msRemaining: number; offlineUntil: number }
@@ -37,6 +38,7 @@ export default function StationList({
   onClearSearch,
 }: StationListProps) {
   "use no memo"
+  const { t } = useI18n()
   const virtualScrollRef = useRef<HTMLDivElement | null>(null)
   const virtualizer = useVirtualizer({
     count: filteredStations.length,
@@ -46,10 +48,10 @@ export default function StationList({
   })
 
   return (
-    <div className="station-list">
+    <div className="station-list" id="station-list" role="region" aria-label="Stations">
       {isLoading ? (
         <section className="station-section" aria-label="Stations laden">
-          <h3>Resultaten laden...</h3>
+          <h3>{t('list.loading')}</h3>
           {Array.from({ length: 6 }).map((_, index) => (
             <div className="skeleton-row" key={`skeleton-${index}`}>
               <div className="skeleton-line skeleton-title"></div>
@@ -61,15 +63,15 @@ export default function StationList({
 
       {!isLoading && filteredStations.length === 0 ? (
         <section className="empty-state" role="status" aria-live="polite">
-          <h3>Geen resultaten met deze filters</h3>
-          <p>Probeer een andere zoekterm, verander de filters of wis de zoekopdracht om meer stations te zien.</p>
+          <h3>{t('list.empty')}</h3>
+          <p>{t('list.emptyHint')}</p>
           <div className="empty-state-actions">
             <button type="button" className="secondary-btn" onClick={onResetFilters}>
-              Reset filters
+              {t('filter.reset')}
             </button>
             {query ? (
               <button type="button" className="secondary-btn" onClick={onClearSearch}>
-                Wis zoekopdracht
+                {t('list.emptyClear')}
               </button>
             ) : null}
           </div>
@@ -78,7 +80,7 @@ export default function StationList({
 
       {offlineStations.length > 0 ? (
         <section className="station-section">
-          <h3>Tijdelijk offline ({offlineStations.length})</h3>
+          <h3>{t('list.offline')} ({offlineStations.length})</h3>
           {offlineStations.map((item) => (
             <div className="station-row" key={`offline-${item.station.stationuuid}`}>
               <button type="button" className="station" onClick={() => onSelectStation(item.station)}>
@@ -109,7 +111,7 @@ export default function StationList({
 
       {favoriteStations.length > 0 ? (
         <section className="station-section">
-          <h3>Favorieten ({favoriteStations.length})</h3>
+          <h3>{t('list.favorites')} ({favoriteStations.length})</h3>
           {favoriteStations.map((station) => (
             <div className="station-row" key={`fav-${station.stationuuid}`}>
               <button
@@ -138,7 +140,7 @@ export default function StationList({
 
       {!isLoading && nearbyStations.length > 0 ? (
         <section className="station-section">
-          <h3>Dichtbij ({nearbyStations.length})</h3>
+          <h3>{t('list.nearby')} ({nearbyStations.length})</h3>
           {nearbyStations.map((station) => (
             <div className="station-row" key={`near-${station.stationuuid}`}>
               <button
@@ -169,7 +171,7 @@ export default function StationList({
 
       {!isLoading ? (
         <section className="station-section">
-          <h3>Topresultaten ({filteredStations.length})</h3>
+          <h3>{t('list.topResults')} ({filteredStations.length})</h3>
           <div ref={virtualScrollRef} className="virtual-list-scroll">
             <div style={{ height: `${virtualizer.getTotalSize()}px`, position: 'relative' }}>
               {virtualizer.getVirtualItems().map((virtualRow) => {

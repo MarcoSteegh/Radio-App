@@ -1,4 +1,6 @@
 import type { FormEvent } from 'react'
+import { useI18n } from '../lib/i18n'
+import type { Locale } from '../lib/i18n'
 
 type FilterPanelProps = {
   query: string
@@ -37,6 +39,8 @@ type FilterPanelProps = {
   onToggleAdmin: () => void
   onToggleTheme: () => void
   onFilterChange: (patch: { country?: string; language?: string; tag?: string }) => void
+  locale: Locale
+  onLocaleChange: (l: Locale) => void
 }
 
 export default function FilterPanel({
@@ -76,119 +80,138 @@ export default function FilterPanel({
   onToggleAdmin,
   onToggleTheme,
   onFilterChange,
+  locale,
+  onLocaleChange,
 }: FilterPanelProps) {
+  const { t } = useI18n()
   return (
     <>
       <div className="brand-panel">
         <div className="brand-top-row">
           <div>
             <p className="eyebrow">Marco Steegh</p>
-            <h1>World Radio Explorer</h1>
-            <p className="subtitle">Ontdek radiostations op de kaart en luister direct live.</p>
+            <h1>{t('app.title')}</h1>
+            <p className="subtitle">{t('app.subtitle')}</p>
           </div>
-          <button type="button" className="theme-toggle" onClick={onToggleTheme}>
-            {theme === 'dark' ? '☀️ Licht' : '🌙 Donker'}
-          </button>
+          <div className="toolbar-group">
+            <select
+              id="locale-select"
+              name="locale"
+              className="locale-select"
+              value={locale}
+              onChange={(e) => onLocaleChange(e.target.value as Locale)}
+              aria-label="Locale"
+            >
+              <option value="nl">NL</option>
+              <option value="en">EN</option>
+              <option value="de">DE</option>
+              <option value="fr">FR</option>
+            </select>
+            <button type="button" className="theme-toggle" onClick={onToggleTheme}>
+              {theme === 'dark' ? '☀️ Licht' : '🌙 Donker'}
+            </button>
+          </div>
         </div>
       </div>
       <form className="search search-panel" onSubmit={onSearch}>
-        <label htmlFor="station-search">Zoek station, genre of stad</label>
+        <label htmlFor="station-search">{t('search.label')}</label>
         <div className="search-row search-row-main">
           <input
             id="station-search"
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
-            placeholder="bijv. rock, Malaga, news"
+            placeholder={t('search.placeholder')}
             aria-describedby="search-help"
+            autoComplete="off"
           />
           <button type="submit" disabled={isLoading}>
-            {isLoading ? 'Laden...' : 'Zoeken'}
+            {isLoading ? t('search.loading') : t('search.button')}
           </button>
           {query ? (
             <button type="button" className="secondary-btn" onClick={onClearSearch}>
-              Wis
+              {t('search.clear')}
             </button>
           ) : null}
         </div>
         <p id="search-help" className="helper subtle">
-          Zoekopdracht en filters worden opgeslagen in je browser.
+          {t('search.help')}
         </p>
         <div className="toolbar-row">
           <div className="toolbar-group">
             <button type="button" className="secondary-btn" disabled={isLocating} onClick={onLocateUser}>
-              {isLocating ? 'Locatie...' : 'Mijn locatie'}
+              {isLocating ? t('nav.locationing') : t('nav.location')}
             </button>
             <button type="button" className="secondary-btn" disabled={isBluetoothConnecting} onClick={onConnectBluetooth}>
-              {isBluetoothConnecting ? 'Bluetooth...' : 'Bluetooth'}
+              {isBluetoothConnecting ? t('nav.bluetoothConnecting') : t('nav.bluetooth')}
             </button>
             <button type="button" className="secondary-btn" disabled={isCasting} onClick={onConnectGoogleHome}>
-              {isCasting ? 'Google Home...' : 'Google Home'}
+              {isCasting ? t('nav.googleHomeConnecting') : t('nav.googleHome')}
             </button>
             {castError && castDeviceName === null ? (
               <button type="button" className="secondary-btn" disabled={isCastLoading} onClick={onRefreshCastSession}>
-                {isCastLoading ? 'Vernieuwen...' : 'Cast'}
+                {isCastLoading ? t('nav.castRefreshing') : t('nav.cast')}
               </button>
             ) : null}
           </div>
           <div className="toolbar-group">
             <button type="button" className="secondary-btn" onClick={onShowSubmit}>
-              Station toevoegen
+              {t('nav.submit')}
             </button>
             <button type="button" className="secondary-btn" onClick={onToggleAdmin}>
-              {showAdmin ? 'Sluit admin' : 'Admin'}
+              {showAdmin ? t('nav.adminClose') : t('nav.admin')}
             </button>
           </div>
         </div>
         <div className="filter-actions">
           <button type="button" className="secondary-btn" onClick={onResetFilters}>
-            Reset filters
+            {t('filter.reset')}
           </button>
           <button type="button" className="secondary-btn" onClick={onResetOfflineStations}>
-            Check offline opnieuw
+            {t('filter.resetOffline')}
           </button>
         </div>
         <div className="status-stack">
           {locationError ? <p className="helper error-text">{locationError}</p> : null}
           {userLocation ? (
             <p className="helper">
-              Locatie actief: {userLocation.lat.toFixed(2)}, {userLocation.lng.toFixed(2)}
+              {t('status.locating')} {userLocation.lat.toFixed(2)}, {userLocation.lng.toFixed(2)}
             </p>
           ) : null}
-          {bluetoothDeviceName ? <p className="helper">Bluetooth gekoppeld: {bluetoothDeviceName}</p> : null}
+          {bluetoothDeviceName ? <p className="helper">{t('status.bluetooth')} {bluetoothDeviceName}</p> : null}
           {bluetoothError ? <p className="helper error-text">{bluetoothError}</p> : null}
-          {castDeviceName ? <p className="helper">Google Home gekoppeld: {castDeviceName}</p> : null}
+          {castDeviceName ? <p className="helper">{t('status.googleHome')} {castDeviceName}</p> : null}
           {castError ? <p className="helper error-text">{castError}</p> : null}
-          {isCastLoading && !isCastAvailable ? <p className="helper">Google Cast initialiseert...</p> : null}
+          {isCastLoading && !isCastAvailable ? <p className="helper">{t('status.castInit')}</p> : null}
           {activeOfflineCount > 0 ? (
-            <p className="helper">{activeOfflineCount} stations tijdelijk verborgen wegens streamfouten.</p>
+            <p className="helper">{activeOfflineCount} {t('status.offlineHidden')}</p>
           ) : null}
           <p className={`helper ${dataStatus === 'fallback' ? 'error-text' : ''}`}>
-            {dataStatus === 'fallback' ? 'Gebruik lokale fallback-data vanwege API-problemen.' : 'Live data actief.'}
+            {dataStatus === 'fallback' ? t('status.fallbackData') : t('status.liveData')}
           </p>
         </div>
         <div className="filter-grid">
-          <label>
-            Land
-            <select value={countryFilter} onChange={(event) => onFilterChange({ country: event.target.value })}>
-              <option value="all">Alle landen</option>
+          <label htmlFor="filter-country">
+            {t('filter.country')}
+            <select id="filter-country" name="country" value={countryFilter} onChange={(event) => onFilterChange({ country: event.target.value })} autoComplete="country">
+              <option value="all">{t('filter.allCountries')}</option>
               {countryOptions.map((country) => (
                 <option key={country} value={country}>{country}</option>
               ))}
             </select>
           </label>
-          <label>
-            Taal
-            <select value={languageFilter} onChange={(event) => onFilterChange({ language: event.target.value })}>
-              <option value="all">Alle talen</option>
+          <label htmlFor="filter-language">
+            {t('filter.language')}
+            <select id="filter-language" name="language" value={languageFilter} onChange={(event) => onFilterChange({ language: event.target.value })} autoComplete="language">
+              <option value="all">{t('filter.allLanguages')}</option>
               {languageOptions.map((language) => (
                 <option key={language} value={language}>{language}</option>
               ))}
             </select>
           </label>
-          <label>
-            Tag
-            <select value={tagFilter} onChange={(event) => onFilterChange({ tag: event.target.value })}>
-              <option value="all">Alle tags</option>
+          <label htmlFor="filter-tag">
+            {t('filter.tag')}
+            <select id="filter-tag" name="tag" value={tagFilter} onChange={(event) => onFilterChange({ tag: event.target.value })} autoComplete="off">
+              <option value="all">{t('filter.allTags')}</option>
               {tagOptions.map((tag) => (
                 <option key={tag} value={tag}>{tag}</option>
               ))}

@@ -110,6 +110,35 @@ export function useAudio(
     }
   }, [])
 
+  useEffect(() => {
+    const audio = audioRef.current
+    if (audio) audio.volume = volume
+  }, [volume])
+
+  useEffect(() => {
+    if (!('mediaSession' in navigator)) return
+    const station = selectedStation
+    if (!station) return
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: station.name,
+      artist: station.country,
+      album: 'World Radio Explorer',
+      artwork: station.favicon ? [{ src: station.favicon, sizes: '96x96', type: 'image/png' }] : [],
+    })
+  }, [selectedStation])
+
+  useEffect(() => {
+    if (!('mediaSession' in navigator)) return
+    navigator.mediaSession.setActionHandler('play', () => { audioRef.current?.play() })
+    navigator.mediaSession.setActionHandler('pause', () => { audioRef.current?.pause() })
+    navigator.mediaSession.setActionHandler('stop', () => { audioRef.current?.pause() })
+    return () => {
+      navigator.mediaSession.setActionHandler('play', null)
+      navigator.mediaSession.setActionHandler('pause', null)
+      navigator.mediaSession.setActionHandler('stop', null)
+    }
+  }, [])
+
   return {
     audioRef,
     volume,
