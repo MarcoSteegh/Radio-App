@@ -19,6 +19,20 @@ function escapeHtml(input: string): string {
     .replace(/'/g, '&#39;')
 }
 
+function FlyToUserLocation({ location }: { location: { lat: number; lng: number } | null }) {
+  const map = useMap()
+  const hasFlownRef = useRef(false)
+
+  useEffect(() => {
+    if (location && !hasFlownRef.current) {
+      hasFlownRef.current = true
+      map.flyTo([location.lat, location.lng], 6, { duration: 1.5 })
+    }
+  }, [location, map])
+
+  return null
+}
+
 function MarkerClusterLayer({
   stations,
   onStationClick,
@@ -111,10 +125,11 @@ type MapSectionProps = {
   mapStations: Station[]
   selectedStation: Station | null
   selectedFlyKey: number
+  userLocation: { lat: number; lng: number } | null
   onStationClick: (station: Station) => void
 }
 
-export default function MapSection({ mapStations, selectedStation, selectedFlyKey, onStationClick }: MapSectionProps) {
+export default function MapSection({ mapStations, selectedStation, selectedFlyKey, userLocation, onStationClick }: MapSectionProps) {
   return (
     <MapContainer
       center={DEFAULT_CENTER}
@@ -142,6 +157,7 @@ export default function MapSection({ mapStations, selectedStation, selectedFlyKe
         longitude={selectedStation?.geo_long ?? null}
         requestKey={selectedFlyKey}
       />
+      <FlyToUserLocation location={userLocation} />
     </MapContainer>
   )
 }

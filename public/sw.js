@@ -1,5 +1,5 @@
 const CACHE_NAME = 'radio-explorer-v1'
-const PRECACHE_URLS = ['/', '/index.html', '/manifest.json', '/favicon.svg']
+const PRECACHE_URLS = ['/', '/index.html', '/manifest.json', '/favicon.svg', '/offline.html']
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -20,7 +20,17 @@ self.addEventListener('fetch', (event) => {
   const { request } = event
   if (request.method !== 'GET') return
   if (request.url.includes('/api/')) return
-  if (request.mode === 'navigate') return
+
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request).catch(async () => {
+        const cache = await caches.open(CACHE_NAME)
+        const cached = await cache.match('/offline.html')
+        return cached ?? new Response('Offline', { status: 503, headers: { 'Content-Type': 'text/plain' } })
+      }),
+    )
+    return
+  }
 
   event.respondWith(
     caches.match(request).then((cached) => {

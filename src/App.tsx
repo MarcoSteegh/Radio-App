@@ -343,6 +343,10 @@ function App() {
     }
   }, [audioRef])
 
+  useEffect(() => {
+    if (navigator.geolocation) locateUser()
+  }, [locateUser])
+
   // -- Render ---------------------------------------------------------------
 
   return (
@@ -400,6 +404,7 @@ function App() {
             mapStations={mapStations}
             selectedStation={selectedStation}
             selectedFlyKey={selectedFlyKey}
+            userLocation={userLocation}
             onStationClick={onSelectStation}
           />
         </div>

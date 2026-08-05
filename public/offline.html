@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="nl" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Offline — World Radio Explorer</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      background: #001219;
+      color: #d5e0e3;
+      min-height: 100dvh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .offline-card {
+      max-width: 420px;
+      width: 100%;
+      padding: 2.5rem 2rem;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: linear-gradient(145deg, rgba(3, 24, 33, 0.72), rgba(4, 33, 44, 0.4));
+      text-align: center;
+    }
+
+    .offline-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      opacity: 0.8;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 0.6rem;
+      color: #fff;
+    }
+
+    p {
+      font-size: 0.95rem;
+      line-height: 1.6;
+      color: #a7bcc2;
+      margin-bottom: 1.5rem;
+    }
+
+    .retry-btn {
+      display: inline-block;
+      padding: 0.65rem 1.8rem;
+      border-radius: 9px;
+      border: 1px solid rgba(255, 183, 3, 0.4);
+      background: rgba(255, 183, 3, 0.15);
+      color: #ffb703;
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 150ms ease, transform 120ms ease;
+    }
+
+    .retry-btn:hover {
+      background: rgba(255, 183, 3, 0.28);
+      transform: scale(1.03);
+    }
+
+    .retry-btn:focus-visible {
+      outline: 2px solid #ffb703;
+      outline-offset: 2px;
+    }
+  </style>
+</head>
+<body>
+  <div class="offline-card">
+    <div class="offline-icon" aria-hidden="true">📡</div>
+    <h1>Je bent offline</h1>
+    <p>
+      Geen internetverbinding gevonden. Controleer je netwerkinstellingen en probeer het opnieuw.
+    </p>
+    <button class="retry-btn" onclick="window.location.reload()">Opnieuw proberen</button>
+  </div>
+</body>
+</html>

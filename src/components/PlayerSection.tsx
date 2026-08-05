@@ -1,4 +1,4 @@
-import { memo } from 'react'
+import { memo, useState, useCallback } from 'react'
 import type { ChangeEvent, RefObject } from 'react'
 import type { Station, Toast } from '../types/station'
 import { useI18n } from '../lib/useI18n'
@@ -71,6 +71,17 @@ function PlayerSection({
   onImportFavorites,
 }: PlayerSectionProps) {
   const { t } = useI18n()
+  const [isConnecting, setIsConnecting] = useState(false)
+
+  const onStreamPlaying = useCallback(() => {
+    setIsConnecting(false)
+    onPlaying()
+  }, [onPlaying])
+
+  const onStreamError = useCallback(() => {
+    setIsConnecting(false)
+    onError()
+  }, [onError])
 
   const togglePlayback = () => {
     const audio = audioRef.current
@@ -78,12 +89,16 @@ function PlayerSection({
     if (isAudioPlaying) {
       audio.pause()
       onCastPause()
+      setIsConnecting(false)
     } else {
+      setIsConnecting(true)
       onEnsureAudioContext()
-      audio.play().catch(() => {})
+      audio.play().catch(() => setIsConnecting(false))
       onCastPlay()
     }
   }
+
+  const showConnecting = isConnecting || (isBuffering && !isAudioPlaying)
 
   return (
     <>
@@ -131,6 +146,11 @@ function PlayerSection({
               {selectedStation.country}
               {selectedStation.state ? `, ${selectedStation.state}` : ''}
             </p>
+            {showConnecting && (
+              <p className="connecting-indicator" role="status" aria-live="polite">
+                {t('player.connecting')}...
+              </p>
+            )}
             <p className="meta">
               {selectedStation.language || t('player.unknownLanguage')} · {selectedStation.tags || t('player.unknownTags')}
             </p>
@@ -146,9 +166,9 @@ function PlayerSection({
             autoPlay
             preload="none"
             aria-label={selectedStation.name}
-            onError={onError}
+            onError={onStreamError}
             onCanPlay={onCanPlay}
-            onPlaying={onPlaying}
+            onPlaying={onStreamPlaying}
             onPlay={() => onSetIsAudioPlaying(true)}
             onPause={onPause}
             onWaiting={onWaiting}
@@ -161,11 +181,12 @@ function PlayerSection({
           <div className="player-controls">
             <button
               type="button"
-              className="play-btn"
+              className={`play-btn${showConnecting ? ' connecting' : ''}`}
               onClick={togglePlayback}
-              aria-label={isBuffering ? t('player.connecting') : isAudioPlaying ? t('player.pause') : t('player.play')}
+              disabled={showConnecting}
+              aria-label={showConnecting ? t('player.connecting') : isAudioPlaying ? t('player.pause') : t('player.play')}
             >
-              {isBuffering ? '◌' : isAudioPlaying ? '⏸' : '▶'}
+              {showConnecting ? '◌' : isAudioPlaying ? '⏸' : '▶'}
             </button>
 
             <div className="volume-row">
