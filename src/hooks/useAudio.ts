@@ -16,6 +16,7 @@ export function useAudio(
 ) {
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const [volume, setVolumeState] = useState(0.4)
+  const [isBuffering, setIsBuffering] = useState(false)
   const volumeRef = useRef(0.4)
   const didManualPlayRef = useRef(false)
   const playStartTrackedIdRef = useRef<string | null>(null)
@@ -89,6 +90,7 @@ export function useAudio(
   }, [clearPlay3MinTimer])
 
   const onAudioPlaying = useCallback(() => {
+    setIsBuffering(false)
     optionsRef.current.setIsAudioPlaying(true)
     ensureAudioContext()
     const audio = audioRef.current
@@ -123,9 +125,18 @@ export function useAudio(
   }, [clearPlay3MinTimer, ensureAudioContext])
 
   const onAudioPauseLike = useCallback(() => {
+    setIsBuffering(false)
     optionsRef.current.setIsAudioPlaying(false)
     clearPlay3MinTimer()
   }, [clearPlay3MinTimer])
+
+  const onAudioWaiting = useCallback(() => {
+    setIsBuffering(true)
+  }, [])
+
+  const onAudioCanPlayThrough = useCallback(() => {
+    setIsBuffering(false)
+  }, [])
 
   const onAudioError = useCallback(() => {
     const current = requestedStationRef.current ?? selectedStationRef.current
@@ -196,10 +207,13 @@ export function useAudio(
     audioRef,
     volume,
     setVolume,
+    isBuffering,
     requestedStationRef,
     onAudioPlaying,
     onAudioPauseLike,
     onAudioError,
+    onAudioWaiting,
+    onAudioCanPlayThrough,
     playStation,
     didManualPlayRef,
     ensureAudioContext,

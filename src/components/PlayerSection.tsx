@@ -7,6 +7,7 @@ type PlayerSectionProps = {
   selectedStation: Station | null
   audioRef: RefObject<HTMLAudioElement | null>
   isAudioPlaying: boolean
+  isBuffering: boolean
   volume: number
   onVolumeChange: (v: number) => void
   sleepEndsAt: number | null
@@ -21,6 +22,8 @@ type PlayerSectionProps = {
   onSelectStation: (station: Station) => void
   onCanPlay: () => void
   onPlaying: () => void
+  onWaiting: () => void
+  onCanPlayThrough: () => void
   onPause: () => void
   onError: () => void
   onEnsureAudioContext: () => void
@@ -38,6 +41,7 @@ function PlayerSection({
   selectedStation,
   audioRef,
   isAudioPlaying,
+  isBuffering,
   volume,
   onVolumeChange,
   sleepEndsAt,
@@ -52,6 +56,8 @@ function PlayerSection({
   onSelectStation,
   onCanPlay,
   onPlaying,
+  onWaiting,
+  onCanPlayThrough,
   onPause,
   onError,
   onEnsureAudioContext,
@@ -86,7 +92,7 @@ function PlayerSection({
       {toast ? (
         <div className={`toast toast-${toast.tone}`} role="status" aria-live="polite">
           <span>{toast.text}</span>
-          <button type="button" className="toast-close" onClick={onDismissToast} aria-label="Sluit melding">
+          <button type="button" className="toast-close" onClick={onDismissToast} aria-label={t('player.dismissToast')}>
             x
           </button>
         </div>
@@ -145,9 +151,11 @@ function PlayerSection({
             onPlaying={onPlaying}
             onPlay={() => onSetIsAudioPlaying(true)}
             onPause={onPause}
+            onWaiting={onWaiting}
+            onCanPlayThrough={onCanPlayThrough}
             className="hidden-audio"
           >
-            Je browser ondersteunt geen audio streaming.
+            {t('player.browserNotSupported')}
           </audio>
 
           <div className="player-controls">
@@ -155,9 +163,9 @@ function PlayerSection({
               type="button"
               className="play-btn"
               onClick={togglePlayback}
-              aria-label={isAudioPlaying ? 'Pauzeer' : 'Speel af'}
+              aria-label={isBuffering ? t('player.connecting') : isAudioPlaying ? t('player.pause') : t('player.play')}
             >
-              {isAudioPlaying ? '⏸' : '▶'}
+              {isBuffering ? '◌' : isAudioPlaying ? '⏸' : '▶'}
             </button>
 
             <div className="volume-row">
@@ -172,7 +180,7 @@ function PlayerSection({
                 step={0.01}
                 value={volume}
                 onChange={(e) => onVolumeChange(Number(e.target.value))}
-                aria-label="Volume"
+                aria-label={t('player.volume')}
               />
               <span className="volume-value">{Math.round(volume * 100)}%</span>
             </div>
@@ -203,7 +211,7 @@ function PlayerSection({
 
           {filteredRecentlyPlayed.length > 0 && (
             <section className="station-section">
-              <h3>Recent gespeeld</h3>
+              <h3>{t('player.recentlyPlayed')}</h3>
               {filteredRecentlyPlayed.map((station) => (
                 <div className="station-row" key={`recent-${station.stationuuid}`}>
                   <button

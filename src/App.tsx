@@ -159,7 +159,7 @@ function App() {
     [showToast, t],
   )
 
-  const { audioRef, volume, setVolume: setLocalVolume, playStation, onAudioPlaying, onAudioPauseLike, onAudioError, ensureAudioContext } = useAudio(selectedStation, {
+  const { audioRef, volume, setVolume: setLocalVolume, isBuffering, playStation, onAudioPlaying, onAudioPauseLike, onAudioError, onAudioWaiting, onAudioCanPlayThrough, ensureAudioContext } = useAudio(selectedStation, {
     onStationOffline,
     onFallbackExhausted,
     onFallbackTriggered,
@@ -409,6 +409,7 @@ function App() {
             selectedStation={selectedStation}
             audioRef={audioRef}
             isAudioPlaying={isAudioPlaying}
+            isBuffering={isBuffering}
             volume={volume}
             onVolumeChange={setVolume}
             sleepEndsAt={sleepEndsAt}
@@ -423,6 +424,8 @@ function App() {
             onSelectStation={onSelectStation}
             onCanPlay={onAudioCanPlay}
             onPlaying={onAudioPlaying}
+            onWaiting={onAudioWaiting}
+            onCanPlayThrough={onAudioCanPlayThrough}
             onPause={onAudioPauseLike}
             onError={onAudioError}
             onEnsureAudioContext={ensureAudioContext}

@@ -6,12 +6,6 @@ import './lib/sentry'
 import './index.css'
 import App from './App.tsx'
 
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {})
-  })
-}
-
 const Fallback = (
   <div style={{ padding: 24, fontFamily: 'system-ui' }}>
     <h1>Er is iets misgegaan</h1>

@@ -63,7 +63,7 @@ function StationRow({
           type="button"
           className="mini-action"
           onClick={onRestore}
-          aria-label={`Herstel ${station.name}`}
+          aria-label={`${t('list.restore')} ${station.name}`}
         >
           ↺
         </button>

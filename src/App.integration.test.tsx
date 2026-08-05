@@ -159,15 +159,15 @@ describe('App integration', () => {
     render(<I18nProvider><App /></I18nProvider>)
 
     const searchInput = screen.getByLabelText('Zoek station, genre of stad') as HTMLInputElement
-    const countrySelect = screen.getByLabelText('Land') as HTMLSelectElement
-    const languageSelect = screen.getByLabelText('Taal') as HTMLSelectElement
-    const tagSelect = screen.getByLabelText('Tag') as HTMLSelectElement
+    const countryBtn = screen.getByRole('button', { name: /Land/i })
+    const languageBtn = screen.getByRole('button', { name: /Taal/i })
+    const tagBtn = screen.getByRole('button', { name: /Tag/i })
 
     await waitFor(() => {
       expect(searchInput.value).toBe('jazz')
-      expect(countrySelect.value).toBe('Belgium')
-      expect(languageSelect.value).toBe('french')
-      expect(tagSelect.value).toBe('pop')
+      expect(countryBtn.textContent).toContain('Belgium')
+      expect(languageBtn.textContent).toContain('french')
+      expect(tagBtn.textContent).toContain('pop')
     })
   })
 
@@ -194,29 +194,39 @@ describe('App integration', () => {
   it('resets country, language and tag filters to all', async () => {
     render(<I18nProvider><App /></I18nProvider>)
 
-    const countrySelect = screen.getByLabelText('Land') as HTMLSelectElement
-    const languageSelect = screen.getByLabelText('Taal') as HTMLSelectElement
-    const tagSelect = screen.getByLabelText('Tag') as HTMLSelectElement
+    const countryBtn = screen.getByRole('button', { name: /Land/i })
+    const languageBtn = screen.getByRole('button', { name: /Taal/i })
+    const tagBtn = screen.getByRole('button', { name: /Tag/i })
 
     await waitFor(() => {
-      expect(countrySelect.options.length).toBeGreaterThan(1)
-      expect(languageSelect.options.length).toBeGreaterThan(1)
-      expect(tagSelect.options.length).toBeGreaterThan(1)
+      expect(countryBtn.textContent).not.toBe('Alle landen')
     })
 
-    fireEvent.change(countrySelect, { target: { value: 'Belgium' } })
-    fireEvent.change(languageSelect, { target: { value: 'french' } })
-    fireEvent.change(tagSelect, { target: { value: 'pop' } })
+    fireEvent.click(countryBtn)
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: 'Belgium' })).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByRole('option', { name: 'Belgium' }))
 
-    expect(countrySelect.value).toBe('Belgium')
-    expect(languageSelect.value).toBe('french')
-    expect(tagSelect.value).toBe('pop')
+    fireEvent.click(languageBtn)
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: 'french' })).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByRole('option', { name: 'french' }))
 
-    fireEvent.click(screen.getByRole('button', { name: 'Reset filters' }))
+    fireEvent.click(tagBtn)
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: 'pop' })).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByRole('option', { name: 'pop' }))
 
-    expect(countrySelect.value).toBe('all')
-    expect(languageSelect.value).toBe('all')
-    expect(tagSelect.value).toBe('all')
+    fireEvent.click(screen.getByRole('button', { name: /Reset filters/i }))
+
+    await waitFor(() => {
+      expect(countryBtn.textContent).toContain('Alle landen')
+      expect(languageBtn.textContent).toContain('Alle talen')
+      expect(tagBtn.textContent).toContain('Alle tags')
+    })
   })
 
   it('imports favorites from json and exports them with success toast', async () => {

@@ -2,6 +2,7 @@ import { memo } from 'react'
 import type { FormEvent } from 'react'
 import { useI18n } from '../lib/useI18n'
 import type { Locale } from '../lib/i18n'
+import FilterCombobox from './FilterCombobox'
 
 type FilterPanelProps = {
   query: string
@@ -191,33 +192,27 @@ function FilterPanel({
           </p>
         </div>
         <div className="filter-grid">
-          <label htmlFor="filter-country">
-            {t('filter.country')}
-            <select id="filter-country" name="country" value={countryFilter} onChange={(event) => onFilterChange({ country: event.target.value })} autoComplete="country">
-              <option value="all">{t('filter.allCountries')}</option>
-              {countryOptions.map((country) => (
-                <option key={country} value={country}>{country}</option>
-              ))}
-            </select>
-          </label>
-          <label htmlFor="filter-language">
-            {t('filter.language')}
-            <select id="filter-language" name="language" value={languageFilter} onChange={(event) => onFilterChange({ language: event.target.value })} autoComplete="language">
-              <option value="all">{t('filter.allLanguages')}</option>
-              {languageOptions.map((language) => (
-                <option key={language} value={language}>{language}</option>
-              ))}
-            </select>
-          </label>
-          <label htmlFor="filter-tag">
-            {t('filter.tag')}
-            <select id="filter-tag" name="tag" value={tagFilter} onChange={(event) => onFilterChange({ tag: event.target.value })} autoComplete="off">
-              <option value="all">{t('filter.allTags')}</option>
-              {tagOptions.map((tag) => (
-                <option key={tag} value={tag}>{tag}</option>
-              ))}
-            </select>
-          </label>
+          <FilterCombobox
+            label={t('filter.country')}
+            value={countryFilter}
+            options={countryOptions}
+            allLabel={t('filter.allCountries')}
+            onChange={(val) => onFilterChange({ country: val })}
+          />
+          <FilterCombobox
+            label={t('filter.language')}
+            value={languageFilter}
+            options={languageOptions}
+            allLabel={t('filter.allLanguages')}
+            onChange={(val) => onFilterChange({ language: val })}
+          />
+          <FilterCombobox
+            label={t('filter.tag')}
+            value={tagFilter}
+            options={tagOptions}
+            allLabel={t('filter.allTags')}
+            onChange={(val) => onFilterChange({ tag: val })}
+          />
         </div>
       </form>
     </>
