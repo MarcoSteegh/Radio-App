@@ -1,9 +1,9 @@
 import { readdir } from 'fs/promises'
-import { fileURLToPath } from 'url'
+import { pathToFileURL } from 'url'
 import { dirname, join } from 'path'
 import { pool } from './db.js'
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
+const __dirname = dirname(pathToFileURL(import.meta.url).pathname)
 
 async function getAppliedMigrations() {
   try {
@@ -22,7 +22,7 @@ async function loadMigrations() {
 
   const migrations = []
   for (const file of files) {
-    const mod = await import(join(migrationsDir, file))
+    const mod = await import(pathToFileURL(join(migrationsDir, file)).href)
     migrations.push(mod.default)
   }
   return migrations
