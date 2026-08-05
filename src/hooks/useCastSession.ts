@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import type { Station } from '../types/station'
 import { trackEvent } from '../lib/observability'
+import type { loadMediaToSession } from './useCastMedia'
 
 type CastSessionLike = {
   getCastDevice?: () => { friendlyName?: string }
@@ -31,11 +32,7 @@ type ChromeCastLike = {
   }
 }
 
-type LoadMediaFn = (
-  station: Station,
-  session: CastSessionLike,
-  mediaNamespace: NonNullable<NonNullable<NonNullable<ChromeCastLike['chrome']>['cast']>['media']>,
-) => Promise<{ ok: true } | { ok: false; error: string }>
+type LoadMediaFn = typeof loadMediaToSession
 
 export type CastSessionState = {
   isCasting: boolean
