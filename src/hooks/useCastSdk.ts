@@ -11,6 +11,11 @@ type ChromeCastLike = {
       SessionState?: { SESSION_STARTED: string; SESSION_RESUMED: string; SESSION_ENDING: string; SESSION_ENDED: string; NO_SESSION: string }
     }
   }
+  chrome?: {
+    cast?: {
+      media?: { DEFAULT_MEDIA_RECEIVER_APP_ID?: string }
+    }
+  }
 }
 
 export type CastSdkState = {

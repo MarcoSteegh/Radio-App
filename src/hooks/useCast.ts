@@ -13,7 +13,7 @@ export function useCast(selectedStation: Station | null) {
     setIsAudioPlaying,
     connectGoogleHome,
     refreshCastSession,
-  } = useCastSession(isCastAvailable, isCastLoading, castError, setCastError, selectedStation, loadMediaToSession)
+  } = useCastSession(isCastAvailable, isCastLoading, setCastError, selectedStation, loadMediaToSession)
 
   const { castToStation, setCastVolume, castPause, castPlay } = useCastMedia(setCastError, setIsAudioPlaying)
 

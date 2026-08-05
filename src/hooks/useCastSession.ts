@@ -49,7 +49,6 @@ export type CastSessionState = {
 export function useCastSession(
   isCastAvailable: boolean,
   isCastLoading: boolean,
-  castError: string | null,
   setCastError: (error: string | null) => void,
   selectedStation: Station | null,
   loadMediaToSession: LoadMediaFn,
