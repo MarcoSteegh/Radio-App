@@ -154,9 +154,9 @@ function App() {
   const onFallbackTriggered = useCallback(
     (from: Station, to: Station) => {
       setFallbackMessage(null)
-      showToast(`${from.name} was offline, overstappen naar ${to.name}.`, 'info')
+      showToast(t('error.fallbackSwitch', { from: from.name, to: to.name }), 'info')
     },
-    [showToast],
+    [showToast, t],
   )
 
   const { audioRef, volume, setVolume: setLocalVolume, playStation, onAudioPlaying, onAudioPauseLike, onAudioError, ensureAudioContext } = useAudio(selectedStation, {

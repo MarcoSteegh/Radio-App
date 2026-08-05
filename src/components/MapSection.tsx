@@ -28,35 +28,55 @@ function MarkerClusterLayer({
 }) {
   const map = useMap()
   const clusterRef = useRef<L.MarkerClusterGroup | null>(null)
+  const stationsRef = useRef<Station[]>([])
   const callbackRef = useRef(onStationClick)
   useEffect(() => { callbackRef.current = onStationClick })
 
   useEffect(() => {
-    if (clusterRef.current) {
-      map.removeLayer(clusterRef.current)
-      clusterRef.current = null
+    if (!clusterRef.current) {
+      const clusterGroup = L.markerClusterGroup({
+        chunkedLoading: true,
+        maxClusterRadius: 50,
+        spiderfyOnMaxZoom: true,
+        showCoverageOnHover: false,
+        iconCreateFunction: (cluster) => {
+          const count = cluster.getChildCount()
+          let sizeClass = 'cluster-sm'
+          let size = 36
+          if (count > 100) { sizeClass = 'cluster-lg'; size = 52 }
+          else if (count > 20) { sizeClass = 'cluster-md'; size = 44 }
+          return L.divIcon({
+            html: `<div class="cluster-icon ${sizeClass}">${count}</div>`,
+            className: '',
+            iconSize: L.point(size, size),
+          })
+        },
+      })
+      map.addLayer(clusterGroup)
+      clusterRef.current = clusterGroup
     }
 
-    const clusterGroup = L.markerClusterGroup({
-      chunkedLoading: true,
-      maxClusterRadius: 50,
-      spiderfyOnMaxZoom: true,
-      showCoverageOnHover: false,
-      iconCreateFunction: (cluster) => {
-        const count = cluster.getChildCount()
-        let sizeClass = 'cluster-sm'
-        let size = 36
-        if (count > 100) { sizeClass = 'cluster-lg'; size = 52 }
-        else if (count > 20) { sizeClass = 'cluster-md'; size = 44 }
-        return L.divIcon({
-          html: `<div class="cluster-icon ${sizeClass}">${count}</div>`,
-          className: '',
-          iconSize: L.point(size, size),
+    const clusterGroup = clusterRef.current
+    const prevStations = stationsRef.current
+    const prevIds = new Set(prevStations.map((s) => s.stationuuid))
+    const nextIds = new Set(stations.map((s) => s.stationuuid))
+
+    for (const station of prevStations) {
+      if (!nextIds.has(station.stationuuid)) {
+        clusterGroup.eachLayer((layer) => {
+          const marker = layer as L.Marker
+          if (marker.getLatLng) {
+            const latLng = marker.getLatLng()
+            if (latLng.lat === station.geo_lat && latLng.lng === station.geo_long) {
+              clusterGroup.removeLayer(marker)
+            }
+          }
         })
-      },
-    })
+      }
+    }
 
     for (const station of stations) {
+      if (prevIds.has(station.stationuuid)) continue
       if (station.geo_lat === null || station.geo_long === null) continue
       const icon = L.divIcon({
         html: '<div class="station-dot"></div>',
@@ -74,8 +94,7 @@ function MarkerClusterLayer({
       clusterGroup.addLayer(marker)
     }
 
-    map.addLayer(clusterGroup)
-    clusterRef.current = clusterGroup
+    stationsRef.current = stations
 
     return () => {
       if (clusterRef.current) {

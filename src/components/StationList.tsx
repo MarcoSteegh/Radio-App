@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
-import OfflineCountdown from './OfflineCountdown'
+import StationRow from './StationRow'
 import { useI18n } from '../lib/useI18n'
 import type { NearbyStation, Station } from '../types/station'
 
@@ -83,29 +83,15 @@ export default function StationList({
         <section className="station-section">
           <h3>{t('list.offline')} ({offlineStations.length})</h3>
           {offlineStations.map((item) => (
-            <div className="station-row" key={`offline-${item.station.stationuuid}`}>
-              <button type="button" className="station" onClick={() => onSelectStation(item.station)}>
-                <span className="station-marker" aria-hidden="true" />
-                <span className="station-text">
-                  <span className="station-title">{item.station.name}</span>
-                  <small>
-                    {item.station.country} · opnieuw over{' '}
-                    <OfflineCountdown
-                      offlineUntil={item.offlineUntil}
-                      onExpire={() => onRestoreOfflineStation(item.station.stationuuid)}
-                    />
-                  </small>
-                </span>
-              </button>
-              <button
-                type="button"
-                className="mini-action"
-                onClick={() => onRestoreOfflineStation(item.station.stationuuid)}
-                aria-label={`Herstel ${item.station.name}`}
-              >
-                ↺
-              </button>
-            </div>
+            <StationRow
+              key={`offline-${item.station.stationuuid}`}
+              station={item.station}
+              isSelected={false}
+              isFavorite={false}
+              offlineUntil={item.offlineUntil}
+              onSelect={() => onSelectStation(item.station)}
+              onRestore={() => onRestoreOfflineStation(item.station.stationuuid)}
+            />
           ))}
         </section>
       ) : null}
@@ -114,27 +100,14 @@ export default function StationList({
         <section className="station-section">
           <h3>{t('list.favorites')} ({favoriteStations.length})</h3>
           {favoriteStations.map((station) => (
-            <div className="station-row" key={`fav-${station.stationuuid}`}>
-              <button
-                type="button"
-                className={station.stationuuid === selectedStation?.stationuuid ? 'station active' : 'station'}
-                onClick={() => onSelectStation(station)}
-              >
-                <span className="station-marker" aria-hidden="true" />
-                <span className="station-text">
-                  <span className="station-title">{station.name}</span>
-                  <small>{station.country}</small>
-                </span>
-              </button>
-              <button
-                type="button"
-                className="mini-action"
-                onClick={() => onToggleFavorite(station)}
-                aria-label={favoriteIdSet.has(station.stationuuid) ? `Verwijder favoriet van ${station.name}` : `Voeg ${station.name} toe aan favorieten`}
-              >
-                ★
-              </button>
-            </div>
+            <StationRow
+              key={`fav-${station.stationuuid}`}
+              station={station}
+              isSelected={station.stationuuid === selectedStation?.stationuuid}
+              isFavorite={favoriteIdSet.has(station.stationuuid)}
+              onSelect={() => onSelectStation(station)}
+              onToggleFavorite={() => onToggleFavorite(station)}
+            />
           ))}
         </section>
       ) : null}
@@ -143,29 +116,15 @@ export default function StationList({
         <section className="station-section">
           <h3>{t('list.nearby')} ({nearbyStations.length})</h3>
           {nearbyStations.map((station) => (
-            <div className="station-row" key={`near-${station.stationuuid}`}>
-              <button
-                type="button"
-                className={station.stationuuid === selectedStation?.stationuuid ? 'station active' : 'station'}
-                onClick={() => onSelectStation(station)}
-              >
-                <span className="station-marker" aria-hidden="true" />
-                <span className="station-text">
-                  <span className="station-title">{station.name}</span>
-                  <small>
-                    {station.country} · {station.distanceKm.toFixed(0)} km
-                  </small>
-                </span>
-              </button>
-              <button
-                type="button"
-                className="mini-action"
-                onClick={() => onToggleFavorite(station)}
-                aria-label={favoriteIdSet.has(station.stationuuid) ? `Verwijder favoriet van ${station.name}` : `Voeg ${station.name} toe aan favorieten`}
-              >
-                {favoriteIdSet.has(station.stationuuid) ? '★' : '☆'}
-              </button>
-            </div>
+            <StationRow
+              key={`near-${station.stationuuid}`}
+              station={station}
+              isSelected={station.stationuuid === selectedStation?.stationuuid}
+              isFavorite={favoriteIdSet.has(station.stationuuid)}
+              subtitle={`${station.country} · ${station.distanceKm.toFixed(0)} km`}
+              onSelect={() => onSelectStation(station)}
+              onToggleFavorite={() => onToggleFavorite(station)}
+            />
           ))}
         </section>
       ) : null}
@@ -180,7 +139,6 @@ export default function StationList({
                 return (
                   <div
                     key={station.stationuuid}
-                    className="station-row"
                     style={{
                       position: 'absolute',
                       top: 0,
@@ -190,27 +148,14 @@ export default function StationList({
                       transform: `translateY(${virtualRow.start}px)`,
                     }}
                   >
-                    <button
-                      type="button"
-                      className={station.stationuuid === selectedStation?.stationuuid ? 'station active' : 'station'}
-                      onClick={() => onSelectStation(station)}
-                    >
-                      <span className="station-marker" aria-hidden="true" />
-                      <span className="station-text">
-                        <span className="station-title">{station.name}</span>
-                        <small>
-                          {station.country} · {station.clickcount} plays
-                        </small>
-                      </span>
-                    </button>
-                    <button
-                      type="button"
-                      className="mini-action"
-                      onClick={() => onToggleFavorite(station)}
-                      aria-label={favoriteIdSet.has(station.stationuuid) ? `Verwijder favoriet van ${station.name}` : `Voeg ${station.name} toe aan favorieten`}
-                    >
-                      {favoriteIdSet.has(station.stationuuid) ? '★' : '☆'}
-                    </button>
+                    <StationRow
+                      station={station}
+                      isSelected={station.stationuuid === selectedStation?.stationuuid}
+                      isFavorite={favoriteIdSet.has(station.stationuuid)}
+                      subtitle={`${station.country} · ${station.clickcount} plays`}
+                      onSelect={() => onSelectStation(station)}
+                      onToggleFavorite={() => onToggleFavorite(station)}
+                    />
                   </div>
                 )
               })}

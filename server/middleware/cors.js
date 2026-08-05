@@ -1,7 +1,8 @@
 import { sendApiError } from './helpers.js'
 
-export function createCorsMiddleware(allowedCorsOrigins) {
+export function createCorsMiddleware(allowedCorsOrigins, { allowLocalhostDev = true } = {}) {
   function isLoopbackDevOrigin(origin) {
+    if (!allowLocalhostDev) return false
     try {
       const parsed = new URL(origin)
       const isHttp = parsed.protocol === 'http:'

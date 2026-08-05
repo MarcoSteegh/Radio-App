@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import type { FormEvent } from 'react'
 import { useI18n } from '../lib/useI18n'
 import type { Locale } from '../lib/i18n'
@@ -43,7 +44,7 @@ type FilterPanelProps = {
   onLocaleChange: (l: Locale) => void
 }
 
-export default function FilterPanel({
+function FilterPanel({
   query,
   isLoading,
   theme,
@@ -222,3 +223,5 @@ export default function FilterPanel({
     </>
   )
 }
+
+export default memo(FilterPanel)

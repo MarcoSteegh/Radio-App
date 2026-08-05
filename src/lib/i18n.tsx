@@ -68,6 +68,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'error.noFallback': 'Geen alternatief station beschikbaar.',
     'error.recovery': 'Stream werkt weer voor',
     'error.noLocation': 'Kan {name} niet op de kaart centreren: locatie ontbreekt.',
+    'error.fallbackSwitch': '{from} was offline, overstappen naar {to}.',
     'skipToContent': 'Ga naar stationlijst',
   },
   en: {
@@ -133,6 +134,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'error.noFallback': 'No alternative station available.',
     'error.recovery': 'Stream working again for',
     'error.noLocation': 'Cannot center {name} on map: location missing.',
+    'error.fallbackSwitch': '{from} was offline, switching to {to}.',
     'skipToContent': 'Skip to station list',
   },
   de: {
@@ -198,6 +200,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'error.noFallback': 'Keine alternative Station verfügbar.',
     'error.recovery': 'Stream funktioniert wieder für',
     'error.noLocation': 'Kann {name} nicht auf Karte zentrieren: Standort fehlt.',
+    'error.fallbackSwitch': '{from} war offline, Wechsel zu {to}.',
     'skipToContent': 'Zur Stationsliste springen',
   },
   fr: {
@@ -263,6 +266,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'error.noFallback': 'Aucune station alternative disponible.',
     'error.recovery': 'Flux fonctionne à nouveau pour',
     'error.noLocation': 'Impossible de centrer {name} sur la carte: position manquante.',
+    'error.fallbackSwitch': '{from} était hors ligne, basculement vers {to}.',
     'skipToContent': 'Aller à la liste des stations',
   },
 }

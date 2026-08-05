@@ -28,8 +28,9 @@ export function createStationRoutes() {
 
       const [rows] = await pool.query(sql, params)
       res.json(rows)
-    } catch {
-      res.json([])
+    } catch (error) {
+      console.error('[stations] searchStations error:', error.message)
+      sendApiError(res, 500, 'DB_ERROR', 'Failed to search stations.')
     }
   }
 
@@ -48,8 +49,9 @@ export function createStationRoutes() {
 
       const first = rows[0] ?? { count: 0 }
       res.json({ count: Number(first.count ?? 0) })
-    } catch {
-      res.json({ count: 0 })
+    } catch (error) {
+      console.error('[stations] getGeoStationCount error:', error.message)
+      sendApiError(res, 500, 'DB_ERROR', 'Failed to count stations.')
     }
   }
 
@@ -74,8 +76,9 @@ export function createStationRoutes() {
       )
 
       res.json(rows)
-    } catch {
-      res.json([])
+    } catch (error) {
+      console.error('[stations] getGeoStations error:', error.message)
+      sendApiError(res, 500, 'DB_ERROR', 'Failed to load stations.')
     }
   }
 
@@ -93,8 +96,9 @@ export function createStationRoutes() {
       )
 
       res.json(rows[0] ?? null)
-    } catch {
-      res.json(null)
+    } catch (error) {
+      console.error('[stations] getStationByUrl error:', error.message)
+      sendApiError(res, 500, 'DB_ERROR', 'Failed to look up station.')
     }
   }
 

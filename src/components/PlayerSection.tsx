@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import type { ChangeEvent, RefObject } from 'react'
 import type { Station, Toast } from '../types/station'
 import { useI18n } from '../lib/useI18n'
@@ -33,7 +34,7 @@ type PlayerSectionProps = {
   onImportFavorites: (e: ChangeEvent<HTMLInputElement>) => void
 }
 
-export default function PlayerSection({
+function PlayerSection({
   selectedStation,
   audioRef,
   isAudioPlaying,
@@ -233,3 +234,5 @@ export default function PlayerSection({
     </>
   )
 }
+
+export default memo(PlayerSection)

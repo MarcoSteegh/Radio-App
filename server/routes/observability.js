@@ -451,7 +451,8 @@ export function createAdminObservabilityRoutes() {
         })
         .sort((a, b) => b.errorRatePct - a.errorRatePct)
 
-      // SLA fields are computed in the main server file and passed via middleware
+      // SLA fields are computed in the main server file and passed via res.locals
+      const sla = res.locals.sla ?? null
       res.json({
         last24h: {
           eventsByName,
@@ -465,6 +466,7 @@ export function createAdminObservabilityRoutes() {
           ),
           funnelCompletenessSeries7d,
           endpointErrorRates,
+          sla,
           kpis: {
             activation: {
               appOpenSessions: activationAppOpenSessions,

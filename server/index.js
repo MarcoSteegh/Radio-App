@@ -16,6 +16,7 @@ import { createAdminAuthRoutes } from './routes/adminAuth.js'
 import { createBulkUpsertRoute } from './routes/bulkUpsert.js'
 import { createAudioProxy } from './routes/audioProxy.js'
 import { createSecurityHeadersMiddleware } from './middleware/securityHeaders.js'
+import { runMigrations } from './migrate.js'
 
 const SENTRY_DSN = process.env.SENTRY_DSN
 if (SENTRY_DSN) {
@@ -45,7 +46,7 @@ const {
   IMAGE_PROXY_RATE_LIMIT_MAX = '120',
   IMAGE_PROXY_ALLOWED_HOSTS = '',
   ADMIN_COOKIE_NAME = 'radio_admin_session',
-  ADMIN_COOKIE_SECURE = 'false',
+  ADMIN_COOKIE_SECURE = process.env.NODE_ENV === 'production' ? 'true' : 'false',
   ADMIN_COOKIE_SAME_SITE = 'Lax',
   ADMIN_COOKIE_PATH = '/api/admin',
 } = process.env
@@ -66,7 +67,9 @@ const allowedCorsOrigins = new Set(
     .map((origin) => origin.toLowerCase()),
 )
 
-app.use(createCorsMiddleware(allowedCorsOrigins))
+app.use(createCorsMiddleware(allowedCorsOrigins, {
+  allowLocalhostDev: process.env.NODE_ENV !== 'production',
+}))
 app.use(createSecurityHeadersMiddleware())
 app.use(express.json({ limit: '2mb' }))
 app.use(createSLAMiddleware())
@@ -180,7 +183,6 @@ app.patch('/api/admin/submissions/:id', authService.requireAdminAuth, adminSubmi
 
 // ─── Admin Observability ────────────────────────────────────────────────────
 app.get('/api/admin/observability/summary', authService.requireAdminAuth, async (_req, res) => {
-  // Inject SLA data before delegating
   const { getRecentEntries, calcAvailability, calcP95, SLA_TARGET } = await import('./middleware/sla.js')
   const allServerEntries = getRecentEntries()
   const serverAvailabilityPct = calcAvailability(allServerEntries)
@@ -189,19 +191,12 @@ app.get('/api/admin/observability/summary', authService.requireAdminAuth, async 
     ? null
     : Number((Math.max(0, serverAvailabilityPct - SLA_TARGET) / (100 - SLA_TARGET) * 100).toFixed(2))
 
-  // Override res.json to inject SLA data
-  const originalJson = res.json.bind(res)
-  res.json = (data) => {
-    if (data?.last24h) {
-      data.last24h.sla = {
-        target_pct: SLA_TARGET,
-        availability_pct: serverAvailabilityPct,
-        error_budget_remaining_pct: errorBudgetRemainingPct,
-        p95_latency_ms: serverP95LatencyMs,
-        total_requests_tracked: allServerEntries.length,
-      }
-    }
-    return originalJson(data)
+  res.locals.sla = {
+    target_pct: SLA_TARGET,
+    availability_pct: serverAvailabilityPct,
+    error_budget_remaining_pct: errorBudgetRemainingPct,
+    p95_latency_ms: serverP95LatencyMs,
+    total_requests_tracked: allServerEntries.length,
   }
 
   adminObservabilityRoutes.getSummary(_req, res)
@@ -214,71 +209,33 @@ app.post('/api/admin/stations/bulk-upsert', requireServiceKey, bulkUpsertRoute.b
 app.use(Sentry.errorHandler())
 
 // ─── Initialize & Start ─────────────────────────────────────────────────────
-async function initializeObservabilityTables() {
-  await pool.query(
-    `
-    CREATE TABLE IF NOT EXISTS analytics_events (
-      id BIGINT NOT NULL AUTO_INCREMENT,
-      event_name VARCHAR(80) NOT NULL,
-      session_id VARCHAR(120) NOT NULL,
-      page VARCHAR(200) NOT NULL DEFAULT '',
-      occurred_at DATETIME NOT NULL,
-      properties_json TEXT NOT NULL,
-      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      PRIMARY KEY (id),
-      INDEX idx_analytics_events_occurred_at (occurred_at),
-      INDEX idx_analytics_events_name (event_name),
-      INDEX idx_analytics_events_session (session_id)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    `,
-  )
+async function start() {
+  try {
+    await runMigrations()
+  } catch (error) {
+    console.error('Migrations failed:', error.message)
+  }
+  const server = app.listen(Number(API_PORT), API_HOST, () => {
+    console.log(`API listening on http://${API_HOST}:${API_PORT}`)
+  })
 
-  await pool.query(
-    `
-    CREATE TABLE IF NOT EXISTS analytics_errors (
-      id BIGINT NOT NULL AUTO_INCREMENT,
-      source VARCHAR(80) NOT NULL,
-      message VARCHAR(400) NOT NULL,
-      stack TEXT NOT NULL,
-      context_json TEXT NOT NULL,
-      session_id VARCHAR(120) NOT NULL DEFAULT '',
-      page VARCHAR(200) NOT NULL DEFAULT '',
-      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      PRIMARY KEY (id),
-      INDEX idx_analytics_errors_created_at (created_at),
-      INDEX idx_analytics_errors_source (source)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    `,
-  )
+  const shutdown = (signal) => {
+    console.log(`\n${signal} received, shutting down gracefully...`)
+    server.close(() => {
+      console.log('HTTP server closed.')
+      void pool.end().then(() => {
+        console.log('Database pool closed.')
+        process.exit(0)
+      })
+    })
+    setTimeout(() => {
+      console.error('Forced shutdown after timeout.')
+      process.exit(1)
+    }, 10_000)
+  }
 
-  await pool.query(
-    `
-    CREATE TABLE IF NOT EXISTS admin_moderation_audit_log (
-      id BIGINT NOT NULL AUTO_INCREMENT,
-      submission_id BIGINT NOT NULL,
-      stationuuid VARCHAR(80) NOT NULL,
-      action VARCHAR(20) NOT NULL,
-      previous_approved TINYINT NOT NULL,
-      next_approved TINYINT NOT NULL,
-      admin_username VARCHAR(120) NOT NULL,
-      ip_address VARCHAR(120) NOT NULL DEFAULT '',
-      user_agent VARCHAR(255) NOT NULL DEFAULT '',
-      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      PRIMARY KEY (id),
-      INDEX idx_admin_audit_submission (submission_id),
-      INDEX idx_admin_audit_created_at (created_at),
-      INDEX idx_admin_audit_admin (admin_username)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    `,
-  )
+  process.on('SIGTERM', () => shutdown('SIGTERM'))
+  process.on('SIGINT', () => shutdown('SIGINT'))
 }
 
-void initializeObservabilityTables()
-  .catch((error) => {
-    console.warn('Observability tables unavailable; continuing without them:', error.message)
-  })
-  .finally(() => {
-    app.listen(Number(API_PORT), API_HOST, () => {
-      console.log(`API listening on http://${API_HOST}:${API_PORT}`)
-    })
-  })
+void start()

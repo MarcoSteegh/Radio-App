@@ -2,7 +2,10 @@ import 'dotenv/config'
 import express from 'express'
 import https from 'https'
 import http from 'http'
+import dns from 'node:dns/promises'
+import net from 'node:net'
 import { URL } from 'url'
+import { isPrivateIp } from '../middleware/helpers.js'
 
 const {
   AUDIO_PROXY_RATE_LIMIT_WINDOW_MS = '60000',
@@ -10,8 +13,23 @@ const {
 } = process.env
 
 const rateState = new Map()
+const RATE_STATE_CLEANUP_INTERVAL_MS = 60_000
+let lastCleanupAt = Date.now()
+
+function cleanupRateState() {
+  const now = Date.now()
+  if (now - lastCleanupAt < RATE_STATE_CLEANUP_INTERVAL_MS) return
+  lastCleanupAt = now
+  const windowMs = Number(AUDIO_PROXY_RATE_LIMIT_WINDOW_MS) || 60000
+  for (const [ip, entry] of rateState) {
+    if (now - entry.start > windowMs * 2) {
+      rateState.delete(ip)
+    }
+  }
+}
 
 function enforceRateLimit(req, res, next) {
+  cleanupRateState()
   const ip = req.ip
   const now = Date.now()
   const windowMs = Number(AUDIO_PROXY_RATE_LIMIT_WINDOW_MS) || 60000
@@ -29,10 +47,49 @@ function enforceRateLimit(req, res, next) {
   next()
 }
 
+async function validateAudioTarget(parsed) {
+  const hostname = parsed.hostname.toLowerCase()
+
+  if (hostname === 'localhost' || hostname.endsWith('.localhost')) {
+    return { ok: false, message: 'Localhost targets are not allowed.' }
+  }
+
+  const ipFamily = net.isIP(hostname)
+  if (ipFamily > 0) {
+    if (isPrivateIp(hostname)) {
+      return { ok: false, message: 'Private network targets are not allowed.' }
+    }
+    return { ok: true }
+  }
+
+  const resolvedIps = new Set()
+  try {
+    const ipv4 = await dns.resolve4(hostname)
+    for (const ip of ipv4) resolvedIps.add(ip)
+  } catch { /* ipv6 may still succeed */ }
+
+  try {
+    const ipv6 = await dns.resolve6(hostname)
+    for (const ip of ipv6) resolvedIps.add(ip)
+  } catch { /* ipv4 may have succeeded */ }
+
+  if (resolvedIps.size === 0) {
+    return { ok: false, message: 'Target hostname could not be resolved.' }
+  }
+
+  for (const ip of resolvedIps) {
+    if (isPrivateIp(ip)) {
+      return { ok: false, message: 'Private network targets are not allowed.' }
+    }
+  }
+
+  return { ok: true }
+}
+
 function createAudioProxy() {
   const router = express.Router()
 
-  router.get('/audio-proxy', enforceRateLimit, (req, res) => {
+  router.get('/audio-proxy', enforceRateLimit, async (req, res) => {
     const streamUrl = req.query.url
     if (!streamUrl || typeof streamUrl !== 'string') {
       return res.status(400).json({ error: 'Missing url parameter.' })
@@ -47,6 +104,11 @@ function createAudioProxy() {
 
     if (!['http:', 'https:'].includes(parsed.protocol)) {
       return res.status(400).json({ error: 'Only http/https URLs allowed.' })
+    }
+
+    const validation = await validateAudioTarget(parsed)
+    if (!validation.ok) {
+      return res.status(403).json({ error: validation.message })
     }
 
     const client = parsed.protocol === 'https:' ? https : http
