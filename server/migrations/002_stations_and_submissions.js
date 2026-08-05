@@ -1,7 +1,7 @@
 export default {
   name: '002_stations_and_submissions',
-  up: `
-    CREATE TABLE IF NOT EXISTS stations (
+  up: [
+    `CREATE TABLE IF NOT EXISTS stations (
       stationuuid   VARCHAR(80)   NOT NULL,
       name          VARCHAR(400)  NOT NULL,
       country       VARCHAR(100)  NOT NULL DEFAULT '',
@@ -22,9 +22,9 @@ export default {
       INDEX idx_stations_lastcheckok (lastcheckok),
       INDEX idx_stations_geo_filter_sort (lastcheckok, clickcount DESC, geo_lat, geo_long),
       FULLTEXT INDEX ft_stations_name (name)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 
-    CREATE TABLE IF NOT EXISTS station_submissions (
+    `CREATE TABLE IF NOT EXISTS station_submissions (
       id            BIGINT        NOT NULL AUTO_INCREMENT,
       stationuuid   VARCHAR(80)   NOT NULL UNIQUE,
       name          VARCHAR(400)  NOT NULL,
@@ -44,9 +44,9 @@ export default {
       submitted_at  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
       PRIMARY KEY (id),
       INDEX idx_submissions_approved (approved)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 
-    CREATE TABLE IF NOT EXISTS admin_moderation_audit_log (
+    `CREATE TABLE IF NOT EXISTS admin_moderation_audit_log (
       id                BIGINT        NOT NULL AUTO_INCREMENT,
       submission_id     BIGINT        NOT NULL,
       stationuuid       VARCHAR(80)   NOT NULL,
@@ -61,20 +61,22 @@ export default {
       INDEX idx_admin_audit_submission (submission_id),
       INDEX idx_admin_audit_created_at (created_at),
       INDEX idx_admin_audit_admin (admin_username)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 
-    DROP TRIGGER IF EXISTS on_submission_insert_uuid;
-    CREATE TRIGGER on_submission_insert_uuid
+    `DROP TRIGGER IF EXISTS on_submission_insert_uuid`,
+
+    `CREATE TRIGGER on_submission_insert_uuid
     BEFORE INSERT ON station_submissions
     FOR EACH ROW
     BEGIN
       IF NEW.stationuuid IS NULL OR NEW.stationuuid = '' THEN
         SET NEW.stationuuid = UUID();
       END IF;
-    END;
+    END`,
 
-    DROP TRIGGER IF EXISTS on_submission_approved;
-    CREATE TRIGGER on_submission_approved
+    `DROP TRIGGER IF EXISTS on_submission_approved`,
+
+    `CREATE TRIGGER on_submission_approved
     AFTER UPDATE ON station_submissions
     FOR EACH ROW
     BEGIN
@@ -103,6 +105,6 @@ export default {
           geo_long = VALUES(geo_long),
           source = VALUES(source);
       END IF;
-    END;
-  `,
+    END`,
+  ],
 }

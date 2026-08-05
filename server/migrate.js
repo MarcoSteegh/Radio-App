@@ -37,7 +37,10 @@ export async function runMigrations() {
     if (applied.has(migration.name)) continue
 
     console.log(`[migrate] Running ${migration.name}...`)
-    await pool.query(migration.up)
+    const statements = Array.isArray(migration.up) ? migration.up : [migration.up]
+    for (const sql of statements) {
+      await pool.query(sql)
+    }
     await pool.query(
       'INSERT INTO schema_migrations (version) VALUES (?)',
       [migration.name],
