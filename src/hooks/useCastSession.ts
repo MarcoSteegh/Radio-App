@@ -17,6 +17,9 @@ type CastContextLike = {
   removeEventListener: (eventType: string, handler: (event: { sessionState: string }) => void) => void
 }
 
+type LoadMediaFn = typeof loadMediaToSession
+type MediaNamespace = Parameters<LoadMediaFn>[2]
+
 type ChromeCastLike = {
   cast?: {
     framework?: {
@@ -27,12 +30,10 @@ type ChromeCastLike = {
   }
   chrome?: {
     cast?: {
-      media?: { DEFAULT_MEDIA_RECEIVER_APP_ID?: string }
+      media?: MediaNamespace & { DEFAULT_MEDIA_RECEIVER_APP_ID?: string }
     }
   }
 }
-
-type LoadMediaFn = typeof loadMediaToSession
 
 export type CastSessionState = {
   isCasting: boolean
