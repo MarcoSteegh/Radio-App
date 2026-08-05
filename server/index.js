@@ -73,7 +73,6 @@ app.use(createCorsMiddleware(allowedCorsOrigins, {
 app.use(createSecurityHeadersMiddleware())
 app.use(express.json({ limit: '2mb' }))
 app.use(createSLAMiddleware())
-app.use(Sentry.requestHandler())
 
 // ─── Shared State ───────────────────────────────────────────────────────────
 const submissionRateState = new Map()
@@ -206,7 +205,9 @@ app.get('/api/admin/observability/summary', authService.requireAdminAuth, async 
 app.post('/api/admin/stations/bulk-upsert', requireServiceKey, bulkUpsertRoute.bulkUpsert)
 
 // ─── Sentry Error Handler ───────────────────────────────────────────────────
-app.use(Sentry.errorHandler())
+if (SENTRY_DSN) {
+  Sentry.setupExpressErrorHandler(app)
+}
 
 // ─── Initialize & Start ─────────────────────────────────────────────────────
 async function start() {
