@@ -49,9 +49,10 @@ export default function FilterCombobox({ label, value, options, allLabel, onChan
 
   return (
     <div className="combobox-wrapper">
-      <label className="filter-label">{label}</label>
+      <label className="filter-label" htmlFor={`combobox-${label}`}>{label}</label>
       <button
         type="button"
+        id={`combobox-${label}`}
         className="combobox-trigger"
         onClick={() => isOpen ? setIsOpen(false) : openDropdown()}
         aria-expanded={isOpen}

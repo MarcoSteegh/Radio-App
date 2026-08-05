@@ -96,6 +96,7 @@ function FilterPanel({
             <p className="subtitle">{t('app.subtitle')}</p>
           </div>
           <div className="toolbar-group">
+            <label htmlFor="locale-select" className="sr-only">{t('filter.language')}</label>
             <select
               id="locale-select"
               name="locale"

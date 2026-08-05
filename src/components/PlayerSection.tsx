@@ -193,7 +193,9 @@ function PlayerSection({
               <span className="volume-label" aria-hidden="true">
                 {volume === 0 ? '🔇' : volume < 0.5 ? '🔉' : '🔊'}
               </span>
+              <label htmlFor="volume-slider" className="sr-only">{t('player.volume')}</label>
               <input
+                id="volume-slider"
                 type="range"
                 className="volume-slider"
                 min={0}
