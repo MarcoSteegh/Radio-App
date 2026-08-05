@@ -318,6 +318,7 @@ describe('App integration', () => {
     }
 
     fireEvent.error(audio)
+    fireEvent.error(audio)
 
     await waitFor(() => {
       expect(screen.getByText(/tijdelijk verborgen wegens streamfouten/i)).toBeInTheDocument()
@@ -344,6 +345,7 @@ describe('App integration', () => {
       throw new Error('Audio element not found')
     }
 
+    fireEvent.error(audio)
     fireEvent.error(audio)
 
     await waitFor(() => {
@@ -379,6 +381,7 @@ describe('App integration', () => {
     const initialLabel = audio.getAttribute('aria-label') ?? ''
 
     fireEvent.error(audio)
+    fireEvent.error(audio)
 
     // Fallback toast should appear.
     await waitFor(() => {
@@ -409,6 +412,7 @@ describe('App integration', () => {
     })
 
     const audio = document.querySelector('audio')!
+    fireEvent.error(audio)
     fireEvent.error(audio)
 
     await waitFor(() => {

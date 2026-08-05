@@ -4,6 +4,9 @@ import { trackEvent } from '../lib/observability'
 
 const hasAudioContext = typeof AudioContext !== 'undefined' || typeof (globalThis as Record<string, unknown>).webkitAudioContext !== 'undefined'
 
+const ERROR_DEBOUNCE_MS = 30_000
+const ERRORS_BEFORE_FALLBACK = 2
+
 export function useAudio(
   selectedStation: Station | null,
   options: {
@@ -24,6 +27,8 @@ export function useAudio(
   const requestedStationRef = useRef<Station | null>(null)
   const selectedStationRef = useRef(selectedStation)
   const optionsRef = useRef(options)
+  const errorTimestampsRef = useRef<number[]>([])
+  const fallbackTriggeredForRef = useRef<string | null>(null)
 
   const audioCtxRef = useRef<AudioContext | null>(null)
   const gainNodeRef = useRef<GainNode | null>(null)
@@ -103,6 +108,11 @@ export function useAudio(
     const current = selectedStationRef.current
     if (!current) return
 
+    errorTimestampsRef.current = []
+    if (fallbackTriggeredForRef.current === current.stationuuid) {
+      fallbackTriggeredForRef.current = null
+    }
+
     const stationId = current.stationuuid
     if (playStartTrackedIdRef.current !== stationId) {
       playStartTrackedIdRef.current = stationId
@@ -141,11 +151,24 @@ export function useAudio(
   const onAudioError = useCallback(() => {
     const current = requestedStationRef.current ?? selectedStationRef.current
     if (!current) return
-    optionsRef.current.onStationOffline(current)
+
+    const now = Date.now()
+    const timestamps = errorTimestampsRef.current.filter((t) => now - t < ERROR_DEBOUNCE_MS)
+    timestamps.push(now)
+    errorTimestampsRef.current = timestamps
+
+    if (fallbackTriggeredForRef.current === current.stationuuid) return
+
+    if (timestamps.length >= ERRORS_BEFORE_FALLBACK) {
+      fallbackTriggeredForRef.current = current.stationuuid
+      optionsRef.current.onStationOffline(current)
+    }
   }, [])
 
   const playStation = useCallback((station: Station) => {
     requestedStationRef.current = station
+    errorTimestampsRef.current = []
+    fallbackTriggeredForRef.current = null
 
     trackEvent('station_select', {
       stationuuid: station.stationuuid,

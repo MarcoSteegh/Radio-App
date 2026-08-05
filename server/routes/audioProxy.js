@@ -120,7 +120,7 @@ function createAudioProxy() {
           'User-Agent': 'WorldRadioExplorer/1.0',
           'Icy-MetaData': '1',
         },
-        timeout: 10000,
+        timeout: 30000,
       },
       (proxyRes) => {
         if (proxyRes.statusCode >= 300 && proxyRes.statusCode < 400 && proxyRes.headers.location) {
@@ -138,7 +138,7 @@ function createAudioProxy() {
                 'User-Agent': 'WorldRadioExplorer/1.0',
                 'Icy-MetaData': '1',
               },
-              timeout: 10000,
+              timeout: 30000,
             },
             (redirectRes) => {
               forwardStream(redirectRes, res)
