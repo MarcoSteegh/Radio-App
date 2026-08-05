@@ -1,9 +1,9 @@
 import { readdir } from 'fs/promises'
-import { pathToFileURL } from 'url'
+import { fileURLToPath, pathToFileURL } from 'url'
 import { dirname, join } from 'path'
 import { pool } from './db.js'
 
-const __dirname = dirname(pathToFileURL(import.meta.url).pathname)
+const __dirname = dirname(fileURLToPath(import.meta.url))
 
 async function getAppliedMigrations() {
   try {
